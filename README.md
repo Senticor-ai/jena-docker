@@ -2,8 +2,8 @@
 
 [![Build](https://github.com/stain/jena-docker/actions/workflows/main.yml/badge.svg)](https://github.com/stain/jena-docker/actions/workflows/main.yml)
 
-This repository hosts [Docker](https://www.docker.com/) recipes for distributing 
-[Apache Jena](http://jena.apache.org/).
+This repository hosts [Docker](https://www.docker.com/) recipes for distributing
+[Apache Jena](http://jena.apache.org/) **version 5.6.0**.
 
 Two Docker images are available:
 
@@ -26,11 +26,26 @@ Note that although these Docker images are based on the official Apache Jena rel
 and do not alter them in any way, they do **not** constitute official releases
 from Apache Software Foundation, and are probably not the latest version.
 
+## Publishing
+
+Images are automatically built and published to GitHub Container Registry when changes are merged to the main branch. See [.github/PUBLISHING.md](.github/PUBLISHING.md) for details.
+
+For local builds and publishing to other registries, see:
+- [DOCKER_HUB_GUIDE.md](DOCKER_HUB_GUIDE.md) - Publishing to Docker Hub
+- [PODMAN_USAGE.md](PODMAN_USAGE.md) - Using with Podman
+
 ## Building
 
 ```shell
 docker build -t jena jena
 docker build -t jena-fuseki jena-fuseki
+
+# Or use the build script
+./build-and-push.sh
+
+# With Podman
+podman build -t jena jena
+podman build -t jena-fuseki jena-fuseki
 ```
  
 ## Dockerfile overview
