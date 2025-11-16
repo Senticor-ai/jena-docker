@@ -43,7 +43,10 @@ jobs:
           docker logs fuseki 2>&1 | grep --quiet ^admin=
           docker logs fuseki 2>&1 | grep --quiet "Fuseki is available"
           curl http://127.0.0.1:3030/ | grep --quiet Fuseki
-          docker kill --signal=SIGINT `docker ps -q`
+          docker ps -q | xargs -r docker kill --signal=SIGINT
           sleep 4
           docker ps
-          test -z "`docker ps -q`" || exit 1
+          if docker ps -q | grep --quiet .; then
+            echo "Containers still running" >&2
+            exit 1
+          fi
