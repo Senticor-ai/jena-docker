@@ -1,0 +1,10 @@
+Command "packages" is deprecated, use `syft scan` instead
+[0000]  WARN failed to fetch registry auth (url=ghcr.io): error getting credentials - err: exec: "docker-credential-desktop": executable file not found in $PATH, out: `` from=stereoscope
+[0001] ERROR [31mcould not determine source: errors occurred attempting to resolve 'ghcr.io/senticor-ai/jena:5.6.0':
+  - snap: snap file "ghcr.io/senticor-ai/jena:5.6.0" does not exist
+  - docker: pull failed: Error response from daemon: {"message":"unable to retrieve auth token: invalid username/password: unauthorized"}
+  - podman: podman not available: no host address
+  - containerd: containerd not available: no grpc connection or services is available: unavailable
+  - oci-registry: failed to get image descriptor from registry: error getting credentials - err: exec: "docker-credential-desktop": executable file not found in $PATH, out: ``
+  - snap: no snap found with name 'ghcr.io/senticor-ai/jena:5.6.0'
+  - additionally, the following providers failed with file does not exist: docker-archive, oci-archive, oci-dir, singularity, local-file, local-directory[0m

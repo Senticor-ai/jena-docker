@@ -99,6 +99,45 @@ When you touch SBOM generation, attestations, or documentation that feeds the tr
    - Documentation links open the freshly generated HTML snapshots (no GitHub login required).
 4. If workflows were skipped (e.g., docs-only changes), manually trigger them via **Actions → Run workflow**.
 
+#### Supply-chain evidence collection
+
+The `Collect supply-chain evidence` step now lives in `.github/scripts/collect-supply-chain-evidence.sh`, so you can run the exact logic locally:
+
+```bash
+# Needs Docker Buildx, Syft, and Cosign on PATH and an authenticated GHCR session
+docker login ghcr.io -u YOUR_USER -p <PAT-with-read:packages>
+
+# Versions default to the ones in the Dockerfiles; override if needed
+REGISTRY=ghcr.io/senticor-ai \
+GITHUB_REPOSITORY=Senticor-ai/jena-docker \
+.github/scripts/collect-supply-chain-evidence.sh
+
+# No Docker CLI (e.g., Podman-only local setup)?
+SKIP_IMAGETOOLS=1 \
+REGISTRY=ghcr.io/senticor-ai \
+GITHUB_REPOSITORY=Senticor-ai/jena-docker \
+.github/scripts/collect-supply-chain-evidence.sh
+
+# Podman workflow (script pulls via Podman and feeds Syft using the podman: scheme)
+podman login ghcr.io
+CONTAINER_CLI=podman \
+REGISTRY=ghcr.io/senticor-ai \
+GITHUB_REPOSITORY=Senticor-ai/jena-docker \
+.github/scripts/collect-supply-chain-evidence.sh
+```
+
+Set `CONTAINER_CLI=nerdctl` (or any CLI that supports Docker Buildx) if you want to exercise the `buildx imagetools` call without Docker itself. With `CONTAINER_CLI=podman` the script automatically pulls the image, feeds Syft using the `podman:` source, and disables the imagetools step (Podman does not provide it). The script captures each command’s output under `supply-chain-data/` so you can inspect failures before pushing.
+
+#### Workflow linting
+
+Broken workflow YAML blocks merges for everyone. Run the local lint script before opening a PR:
+
+```bash
+.github/scripts/lint-workflows.sh
+```
+
+The helper script downloads the pinned `actionlint` release (v1.7.1) into `.github/tools/` if it is not already installed on your PATH. You only need network access the first time; subsequent runs reuse the cached binary.
+
 #### Code Style
 
 - **Dockerfiles**:

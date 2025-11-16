@@ -35,6 +35,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  packages: read
 
 concurrency:
   group: "pages"
@@ -90,25 +91,7 @@ jobs:
           JENA_VERSION: ${{ steps.versions.outputs.jena_version }}
           FUSEKI_VERSION: ${{ steps.versions.outputs.fuseki_version }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          mkdir -p supply-chain-data
-          for image in jena jena-fuseki; do
-            case "$image" in
-              jena) version="$JENA_VERSION" ;;
-              jena-fuseki) version="$FUSEKI_VERSION" ;;
-              *) echo "Unknown image $image" >&2; exit 1 ;;
-            esac
-            ref="${REGISTRY}/${image}:${version}"
-            fmt='{{json .Attestations}}'
-            docker buildx imagetools inspect "$ref" --format "$fmt" > "supply-chain-data/${image}-attestations.json" 2>&1
-            syft packages "$ref" -o spdx-json > "supply-chain-data/${image}-syft.spdx.json" 2>&1
-            COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
-              --type slsaprovenance \
-              --certificate-identity-regexp "https://github.com/${GITHUB_REPOSITORY}/.+" \
-              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-              "$ref" > "supply-chain-data/${image}-cosign.txt" 2>&1
-          done
+        run: .github/scripts/collect-supply-chain-evidence.sh
 
       - name: Download SBOM artifacts
         uses: actions/download-artifact@v4
