@@ -107,22 +107,26 @@ Automated publication of SBOMs to GitHub Pages for public transparency:
 - Provides command examples for verifying attestations
 - Demonstrates BSI TR-03183 transparency requirements
 
+**What Gets Published**:
+
+A professional, human-readable HTML webpage featuring:
+- Beautiful responsive design with compliance badges (BSI TR-03183, SLSA Level 3, SPDX 2.3)
+- Downloadable SBOM files in SPDX format
+- Command examples for accessing attestations (Docker, Syft, Cosign)
+- Container image information
+- Security features and compliance documentation
+- Automatic timestamp updates
+
 **Setup Instructions**:
 
-To enable GitHub Pages for this repository:
+See [GITHUB_PAGES_SETUP.md](GITHUB_PAGES_SETUP.md) for detailed setup guide.
 
+**Quick Setup**:
 1. Go to repository **Settings** → **Pages**
-2. Under **Build and deployment**:
-   - **Source**: Select "GitHub Actions"
-3. Save the settings
+2. Set **Source** to "GitHub Actions"
+3. Save - that's it!
 
-Once enabled, SBOMs will be automatically published to `https://senticor-ai.github.io/jena-docker/` after each container image release.
-
-**Manual Trigger**:
-```bash
-# You can manually trigger the GitHub Pages deployment from the Actions tab
-# Select "Publish SBOM to GitHub Pages" workflow and click "Run workflow"
-```
+Once enabled, the page will be live at `https://senticor-ai.github.io/jena-docker/` and automatically update after each container image release.
 
 ### 5. License Documentation
 
