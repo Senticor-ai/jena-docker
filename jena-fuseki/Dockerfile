@@ -17,7 +17,7 @@
 FROM eclipse-temurin:21-jre-alpine
 LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 RUN set -eux; \
     apk -U upgrade; \
     apk add bash curl ca-certificates findutils coreutils gettext pwgen procps tini; \
@@ -26,26 +26,26 @@ RUN set -eux; \
 
 # Update below according to https://jena.apache.org/download/
 # and checksum for apache-jena-fuseki-5.x.x.tar.gz.sha512
-ENV FUSEKI_SHA512 53dfe13cdd5f6387a0c62917e275fde2cd2e2f2052bfe7515384934f24915228b8512a2dd2b50b7060cc300c976254349d991fcea239484cae48e0a59d67cd54
-ENV FUSEKI_VERSION 5.6.0
-ENV ASF_MIRROR https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
-ENV ASF_ARCHIVE https://archive.apache.org/dist/
+ENV FUSEKI_SHA512=53dfe13cdd5f6387a0c62917e275fde2cd2e2f2052bfe7515384934f24915228b8512a2dd2b50b7060cc300c976254349d991fcea239484cae48e0a59d67cd54
+ENV FUSEKI_VERSION=5.6.0
+ENV ASF_MIRROR=https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
+ENV ASF_ARCHIVE=https://archive.apache.org/dist/
 
-LABEL org.opencontainers.image.url https://github.com/stain/jena-docker/tree/master/jena-fuseki
-LABEL org.opencontainers.image.source https://github.com/stain/jena-docker/
-LABEL org.opencontainers.image.documentation https://jena.apache.org/documentation/fuseki2/
-LABEL org.opencontainers.image.title "Apache Jena Fuseki"
-LABEL org.opencontainers.image.description "Fuseki is a SPARQL 1.1 server with a web interface, backed by the Apache Jena TDB RDF triple store."
-LABEL org.opencontainers.image.version ${FUSEKI_VERSION}
-LABEL org.opencontainers.image.licenses "(Apache-2.0 AND (GPL-2.0 WITH Classpath-exception-2.0) AND GPL-3.0)"
-LABEL org.opencontainers.image.authors "Apache Jena Fuseki by https://jena.apache.org/; this image by https://orcid.org/0000-0001-9842-9718"
+LABEL org.opencontainers.image.url="https://github.com/stain/jena-docker/tree/master/jena-fuseki"
+LABEL org.opencontainers.image.source="https://github.com/stain/jena-docker/"
+LABEL org.opencontainers.image.documentation="https://jena.apache.org/documentation/fuseki2/"
+LABEL org.opencontainers.image.title="Apache Jena Fuseki"
+LABEL org.opencontainers.image.description="Fuseki is a SPARQL 1.1 server with a web interface, backed by the Apache Jena TDB RDF triple store."
+LABEL org.opencontainers.image.version="${FUSEKI_VERSION}"
+LABEL org.opencontainers.image.licenses="(Apache-2.0 AND (GPL-2.0 WITH Classpath-exception-2.0) AND GPL-3.0)"
+LABEL org.opencontainers.image.authors="Apache Jena Fuseki by https://jena.apache.org/; this image by https://orcid.org/0000-0001-9842-9718"
 
 # Config and data
-ENV FUSEKI_BASE /fuseki
+ENV FUSEKI_BASE=/fuseki
 
 
 # Installation folder
-ENV FUSEKI_HOME /jena-fuseki
+ENV FUSEKI_HOME=/jena-fuseki
 
 WORKDIR /tmp
 # published sha512 checksum

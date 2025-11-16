@@ -28,8 +28,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  JENA_IMAGE_NAME: ${{ github.repository_owner }}/jena
-  FUSEKI_IMAGE_NAME: ${{ github.repository_owner }}/jena-fuseki
+  IMAGE_OWNER: senticor-ai  # Lowercase for container registry compatibility
 
 jobs:
   build-and-push:
@@ -68,7 +67,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image.name }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -97,7 +96,7 @@ jobs:
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0.18.0
         with:
-          image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: sbom-${{ matrix.image.name }}.spdx.json
           upload-artifact: true
@@ -108,14 +107,14 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
       - name: Attest SBOM
         uses: actions/attest-sbom@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
           sbom-path: sbom-${{ matrix.image.name }}.spdx.json
           push-to-registry: true

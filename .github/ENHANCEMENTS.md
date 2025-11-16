@@ -95,6 +95,35 @@ docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:5.6.0
 # Or use: syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0
 ```
 
+### 4a. GitHub Pages for SBOM Transparency
+
+**File**: `.github/workflows/publish-sbom-pages.yml`
+
+Automated publication of SBOMs to GitHub Pages for public transparency:
+
+**Features**:
+- Automatically triggered after container image publication
+- Creates user-friendly HTML interface for browsing SBOMs
+- Provides command examples for verifying attestations
+- Demonstrates BSI TR-03183 transparency requirements
+
+**Setup Instructions**:
+
+To enable GitHub Pages for this repository:
+
+1. Go to repository **Settings** → **Pages**
+2. Under **Build and deployment**:
+   - **Source**: Select "GitHub Actions"
+3. Save the settings
+
+Once enabled, SBOMs will be automatically published to `https://senticor-ai.github.io/jena-docker/` after each container image release.
+
+**Manual Trigger**:
+```bash
+# You can manually trigger the GitHub Pages deployment from the Actions tab
+# Select "Publish SBOM to GitHub Pages" workflow and click "Run workflow"
+```
+
 ### 5. License Documentation
 
 **File**: `LICENSES.md`
