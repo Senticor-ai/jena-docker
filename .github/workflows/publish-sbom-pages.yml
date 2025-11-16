@@ -44,6 +44,64 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine release versions
+        id: versions
+        run: |
+          set -euo pipefail
+          JENA_VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+          FUSEKI_VERSION=$(grep -m1 'ENV[[:space:]]\+FUSEKI_VERSION' jena-fuseki/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+          if [ -z "$JENA_VERSION" ] || [ -z "$FUSEKI_VERSION" ]; then
+            echo "Unable to determine image versions" >&2
+            exit 1
+          fi
+          echo "jena_version=$JENA_VERSION" >> "$GITHUB_OUTPUT"
+          echo "fuseki_version=$FUSEKI_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.4.0'
+
+      - name: Collect supply-chain evidence
+        env:
+          REGISTRY: ghcr.io/senticor-ai
+          JENA_VERSION: ${{ steps.versions.outputs.jena_version }}
+          FUSEKI_VERSION: ${{ steps.versions.outputs.fuseki_version }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p supply-chain-data
+          for image in jena jena-fuseki; do
+            case "$image" in
+              jena) version="$JENA_VERSION" ;;
+              jena-fuseki) version="$FUSEKI_VERSION" ;;
+              *) echo "Unknown image $image" >&2; exit 1 ;;
+            esac
+            ref="${REGISTRY}/${image}:${version}"
+            fmt='{{json .Attestations}}'
+            docker buildx imagetools inspect "$ref" --format "$fmt" > "supply-chain-data/${image}-attestations.json" 2>&1
+            syft packages "$ref" -o spdx-json > "supply-chain-data/${image}-syft.spdx.json" 2>&1
+            COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
+              --type slsaprovenance \
+              --certificate-identity-regexp "https://github.com/${GITHUB_REPOSITORY}/.+" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              "$ref" > "supply-chain-data/${image}-cosign.txt" 2>&1
+          done
+
       - name: Download SBOM artifacts
         uses: actions/download-artifact@v4
         with:
@@ -58,13 +116,68 @@ jobs:
           set -euo pipefail
           mkdir -p public/sbom
           mkdir -p public/docs
+          mkdir -p public/evidence
 
           if [ -d "sbom-artifacts" ]; then
             find sbom-artifacts -name "*.spdx.json" -exec cp {} public/sbom/ \;
           fi
 
+          if [ -d "supply-chain-data" ]; then
+            shopt -s nullglob
+            for evidence_file in supply-chain-data/*; do
+              cp "$evidence_file" "public/evidence/$(basename "$evidence_file")"
+            done
+            shopt -u nullglob
+          fi
+
           html_escape() {
             python3 -c 'import html, sys; print(html.escape(sys.argv[1]))' "$1"
+          }
+
+          HTML_DEST="public/index.html"
+
+          render_command_block() {
+            local heading="$1"
+            local command="$2"
+            local file="$3"
+            local download_label="$4"
+
+            {
+              echo '                      <div class="command-block">'
+              echo "                          <h4>${heading}</h4>"
+              echo "                          <p class=\"command-string\"><code>${command}</code></p>"
+            } >> "$HTML_DEST"
+
+            if [ -f "$file" ]; then
+              local rel="evidence/$(basename "$file")"
+              local size_bytes
+              size_bytes=$(stat -c '%s' "$file")
+              local size_human="${size_bytes} bytes"
+              if command -v numfmt >/dev/null 2>&1; then
+                size_human=$(numfmt --to=iec --suffix=B "$size_bytes")
+              fi
+              {
+                echo "                          <a class=\"download-link\" href=\"${rel}\" download>${download_label} (${size_human})</a>"
+                echo '                          <details>'
+                echo '                              <summary>View captured output</summary>'
+                echo '                              <pre>'
+              } >> "$HTML_DEST"
+              python3 - "$file" <<'PY' >> "$HTML_DEST"
+import html, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+print(html.escape(path.read_text()))
+PY
+              {
+                echo '                              </pre>'
+                echo '                          </details>'
+                echo '                      </div>'
+              } >> "$HTML_DEST"
+            else
+              {
+                echo '                          <p class="missing-evidence">Evidence file not available for this command.</p>'
+                echo '                      </div>'
+              } >> "$HTML_DEST"
+            fi
           }
 
           DOC_SECTION_HTML=""
@@ -145,6 +258,14 @@ DOCS
             DOC_SECTION_HTML='                      <li>Documentation snapshots were not generated for this run.</li>
 '
           fi
+
+          REGISTRY="ghcr.io/senticor-ai"
+          JENA_VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+          FUSEKI_VERSION=$(grep -m1 'ENV[[:space:]]\+FUSEKI_VERSION' jena-fuseki/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+          declare -A IMAGE_TITLES=([jena]="Jena CLI Tools" [jena-fuseki]="Fuseki Server")
+          declare -A IMAGE_VERSIONS
+          IMAGE_VERSIONS["jena"]=${JENA_VERSION:-"latest"}
+          IMAGE_VERSIONS["jena-fuseki"]=${FUSEKI_VERSION:-"latest"}
 
           REF_FALLBACK="${GITHUB_REF:-""}"
           SOURCE_WORKFLOW="${GITHUB_WORKFLOW:-"Publish SBOM"}"
@@ -367,6 +488,65 @@ DOCS
                   details summary {
                       cursor: pointer;
                       font-weight: 600;
+                  }
+                  .evidence-card {
+                      background: #ffffff;
+                      border-radius: 6px;
+                      border: 1px solid #e1e1e1;
+                      padding: 20px;
+                      margin-bottom: 25px;
+                  }
+                  .evidence-card h3 {
+                      margin: 0 0 12px 0;
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 8px;
+                      align-items: baseline;
+                  }
+                  .image-ref {
+                      font-size: 14px;
+                      color: #555;
+                  }
+                  .command-block {
+                      background: #f8f9fc;
+                      border-left: 4px solid #6f42c1;
+                      padding: 12px 16px;
+                      border-radius: 4px;
+                      margin-bottom: 15px;
+                  }
+                  .command-block h4 {
+                      margin: 0 0 6px 0;
+                      font-size: 15px;
+                  }
+                  .command-block code {
+                      display: block;
+                      padding: 6px 8px;
+                      background: #fff;
+                      border-radius: 4px;
+                      border: 1px solid #e1e1e1;
+                      margin-bottom: 8px;
+                      white-space: break-spaces;
+                  }
+                  .command-block details {
+                      margin-top: 8px;
+                  }
+                  .command-block pre {
+                      background: #1e1e1e;
+                      color: #f1f1f1;
+                      padding: 12px;
+                      border-radius: 4px;
+                      max-height: 400px;
+                      overflow: auto;
+                      font-size: 13px;
+                  }
+                  .download-link {
+                      display: inline-block;
+                      margin-bottom: 6px;
+                      color: #0066cc;
+                  }
+                  .missing-evidence {
+                      color: #b00020;
+                      font-style: italic;
                   }
               </style>
           </head>
@@ -591,10 +771,29 @@ DOCS
                       </ul>
                       All container signatures and SLSA attestations reference the metadata above.
                   </div>
-                  <p>Independent verification commands (optional):</p>
-                  <pre>docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:5.6.0 --format "{{json .Attestations}}"</pre>
-                  <pre>syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0 -o spdx-json</pre>
-                  <pre>cosign verify-attestation --type slsaprovenance ghcr.io/senticor-ai/jena-fuseki:5.6.0</pre>
+                  <p>Each workflow run executes the verification commands below for every published image and captures the output for auditors.</p>
+EOF
+
+          for image in jena jena-fuseki; do
+            title="${IMAGE_TITLES[$image]}"
+            version="${IMAGE_VERSIONS[$image]}"
+            image_ref="${REGISTRY}/${image}:${version}"
+            att_cmd=$(html_escape "docker buildx imagetools inspect ${image_ref} --format \"{{json .Attestations}}\"")
+            syft_cmd=$(html_escape "syft packages ${image_ref} -o spdx-json")
+            cosign_cmd=$(html_escape "COSIGN_EXPERIMENTAL=1 cosign verify-attestation --type slsaprovenance --certificate-identity-regexp \"https://github.com/${GITHUB_REPOSITORY}/.+\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\" ${image_ref}")
+            cat >> public/index.html <<EOF
+                  <div class="evidence-card">
+                      <h3>${title} <span class="image-ref"><code>${image_ref}</code></span></h3>
+EOF
+            render_command_block "View Image Attestations" "$att_cmd" "public/evidence/${image}-attestations.json" "Download attestation JSON"
+            render_command_block "Extract SBOM (Syft)" "$syft_cmd" "public/evidence/${image}-syft.spdx.json" "Download Syft output"
+            render_command_block "Verify Build Provenance (Cosign)" "$cosign_cmd" "public/evidence/${image}-cosign.txt" "Download cosign log"
+            cat >> public/index.html <<'EOF'
+                  </div>
+EOF
+          done
+
+          cat >> public/index.html <<'EOF'
 
                   <h2>🛡️ Security Features</h2>
                   <ul>
