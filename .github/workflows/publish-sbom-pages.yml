@@ -189,9 +189,7 @@ jobs:
                   <pre>syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0 -o spdx-json</pre>
 
                   <h3>Verify Build Provenance (with cosign)</h3>
-                  <pre>cosign verify-attestation \
-  --type slsaprovenance \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0</pre>
+                  <pre>cosign verify-attestation --type slsaprovenance ghcr.io/senticor-ai/jena-fuseki:5.6.0</pre>
 
                   <h2>📦 Container Images</h2>
                   <ul class="artifact-list">
