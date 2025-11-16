@@ -37,11 +37,11 @@ jobs:
           docker run --volume /tmp:/rdf jena riot example.ttl > /tmp/example.nq
           grep --quiet example.com /tmp/example.nq
           docker run --name fuseki -p 127.0.0.1:3030:3030 -d jena-fuseki
-          sleep 8
+          sleep 10
           curl --silent --output /dev/null  --show-error -L --max-redirs 3 --retry 3 --retry-delay 4 --max-time 30 http://127.0.0.1:3030/
           docker logs fuseki
           docker logs fuseki 2>&1 | grep --quiet ^admin=
-          docker logs fuseki 2>&1 | grep --quiet Started
+          docker logs fuseki 2>&1 | grep --quiet "Fuseki is available"
           curl http://127.0.0.1:3030/ | grep --quiet Fuseki
           docker kill --signal=SIGINT `docker ps -q`
           sleep 4
