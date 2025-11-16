@@ -54,7 +54,10 @@ This project includes:
 
 ### Viewing SBOMs and Attestations
 
-SBOMs and attestations are attached to the container images. You can access them using:
+View the Software Bill of Materials and supply chain transparency information at:
+**[https://senticor-ai.github.io/jena-docker/](https://senticor-ai.github.io/jena-docker/)**
+
+SBOMs and attestations are also attached to the container images. You can access them using:
 
 ```bash
 # View image attestations
