@@ -69,19 +69,14 @@ jobs:
 
       - name: Wait for Fuseki to be ready
         run: |
-          echo "Waiting for Fuseki to start..."
-          sleep 10
-          for i in {1..30}; do
-            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Ping endpoint responding, waiting for admin setup..."
-              sleep 3
-              # Test if admin endpoint is ready
-              if curl -f -u admin:testpass123 http://localhost:3030/$/server 2>/dev/null; then
-                echo "Fuseki is fully ready with admin auth!"
-                break
-              fi
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-test 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
             fi
-            echo "Attempt $i/30: Fuseki not fully ready yet..."
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
             sleep 2
           done
           echo "=== Fuseki logs ==="
@@ -173,19 +168,14 @@ jobs:
 
       - name: Wait for Fuseki to be ready
         run: |
-          echo "Waiting for Fuseki to start..."
-          sleep 10
-          for i in {1..30}; do
-            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Ping endpoint responding, waiting for admin setup..."
-              sleep 3
-              # Test if admin endpoint is ready
-              if curl -f -u admin:testpass http://localhost:3030/$/datasets 2>/dev/null; then
-                echo "Fuseki is fully ready with admin auth!"
-                break
-              fi
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-tdb2 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
             fi
-            echo "Attempt $i/30: Fuseki not fully ready yet..."
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
             sleep 2
           done
           echo "=== Fuseki logs ==="
@@ -229,19 +219,14 @@ jobs:
 
       - name: Wait for startup
         run: |
-          echo "Waiting for Fuseki to start..."
-          sleep 10
-          for i in {1..30}; do
-            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Ping endpoint responding, waiting for admin setup..."
-              sleep 3
-              # Test if admin endpoint is ready
-              if curl -f -u admin:testpass http://localhost:3030/$/datasets 2>/dev/null; then
-                echo "Fuseki is fully ready with admin auth!"
-                break
-              fi
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-persist 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
             fi
-            echo "Attempt $i/30: Fuseki not fully ready yet..."
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
             sleep 2
           done
           echo "=== Fuseki logs ==="
@@ -272,19 +257,14 @@ jobs:
 
       - name: Wait for startup after restart
         run: |
-          echo "Waiting for Fuseki to start..."
-          sleep 10
-          for i in {1..30}; do
-            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Ping endpoint responding, waiting for admin setup..."
-              sleep 3
-              # Test if admin endpoint is ready
-              if curl -f -u admin:testpass http://localhost:3030/$/datasets 2>/dev/null; then
-                echo "Fuseki is fully ready with admin auth!"
-                break
-              fi
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-persist2 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
             fi
-            echo "Attempt $i/30: Fuseki not fully ready yet..."
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
             sleep 2
           done
           echo "=== Fuseki logs ==="
