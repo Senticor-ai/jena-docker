@@ -97,6 +97,12 @@ docker build -t jena-fuseki jena-fuseki
 podman build -t jena jena
 podman build -t jena-fuseki jena-fuseki
 ```
+
+## Troubleshooting & Lessons Learned
+
+- **Always exercise both architectures locally.** Slow boots under QEMU (especially on Apple Silicon) can make the Fuseki ping check fail in CI even though `docker build` passes. Reproduce GitHub Actions locally with `podman build --platform linux/amd64,linux/arm64 jena-fuseki` to catch timing issues before pushing.
+- **Fuseki readiness probe relies on real HTTP checks.** During the build we now poll `http://localhost:3030/$/ping` for up to ~150 s. Expect the first few attempts to fail with `curl: (7)` until the server is ready—only a final failure accompanied by log output indicates a real problem.
+- **Transparency site reflects the latest workflow artifacts.** The SBOM/attestation page at <https://senticor-ai.github.io/jena-docker/> is updated by the “Publish SBOM to GitHub Pages” workflow, which itself runs after “Publish Container Images”. If you change SBOM generation or documentation, re-run those workflows so auditors immediately see the new data.
  
 ## Dockerfile overview
 
@@ -140,4 +146,3 @@ For usage, see README for each of the Docker images:
 
 * [jena/README.md](jena/README.md)
 * [jena-fuseki/README.md](jena-fuseki/README.md)
-

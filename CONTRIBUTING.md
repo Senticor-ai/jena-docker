@@ -69,6 +69,8 @@ Branch naming:
 # Build images
 docker build -t jena:test jena/
 docker build -t jena-fuseki:test jena-fuseki/
+# Exercise both architectures (matches CI)
+podman build --platform linux/amd64,linux/arm64 jena-fuseki
 
 # Test Jena
 docker run --rm jena:test riot --version
@@ -83,6 +85,19 @@ docker stop fuseki-test && docker rm fuseki-test
 cd .github/workflows
 # Review integration-tests.yml and run relevant commands manually
 ```
+
+> 💡 **Lesson learned:** Our GitHub Actions use Buildx/QEMU for ARM64; they regularly surface timing bugs (e.g., Fuseki taking >20 s to respond). Running the multi-arch `podman build --platform ...` command locally keeps the CI signal green and avoids long back-and-forth cycles.
+
+#### Transparency workflow checks
+
+When you touch SBOM generation, attestations, or documentation that feeds the transparency site:
+
+1. Push your changes and let “Publish Container Images” finish.
+2. Ensure “Publish SBOM to GitHub Pages” runs (it depends on the previous workflow).
+3. Visit https://senticor-ai.github.io/jena-docker/ and confirm:
+   - SBOM cards list the new artifacts.
+   - Documentation links open the freshly generated HTML snapshots (no GitHub login required).
+4. If workflows were skipped (e.g., docs-only changes), manually trigger them via **Actions → Run workflow**.
 
 #### Code Style
 

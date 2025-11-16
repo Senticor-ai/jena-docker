@@ -55,14 +55,159 @@ jobs:
 
       - name: Create SBOM index page
         run: |
+          set -euo pipefail
           mkdir -p public/sbom
+          mkdir -p public/docs
 
-          # Copy SBOMs if they exist
           if [ -d "sbom-artifacts" ]; then
             find sbom-artifacts -name "*.spdx.json" -exec cp {} public/sbom/ \;
           fi
 
-          # Create index.html
+          html_escape() {
+            python3 -c 'import html, sys; print(html.escape(sys.argv[1]))' "$1"
+          }
+
+          DOC_SECTION_HTML=""
+          DOC_SOURCES_FOUND=0
+          while IFS='|' read -r src title slug; do
+            [ -n "$src" ] || continue
+            if [ -f "$src" ]; then
+              dest="public/docs/${slug}.html"
+              python3 - "$src" "$dest" "$title" <<'PY'
+import html, pathlib, sys, datetime
+src, dest, title = sys.argv[1:4]
+path = pathlib.Path(src)
+text = path.read_text(encoding="utf-8")
+escaped = html.escape(text)
+updated = datetime.datetime.utcfromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S UTC")
+template = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{html.escape(title)} - Apache Jena Docker</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }}
+    .container {{
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px 30px;
+      max-width: 1000px;
+      margin: 0 auto;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }}
+    pre {{
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 6px;
+      border: 1px solid #e1e4e8;
+    }}
+    a.back {{
+      display: inline-block;
+      margin-bottom: 15px;
+      text-decoration: none;
+      color: #0066cc;
+      font-weight: 600;
+    }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="../index.html">← Back to transparency overview</a>
+    <h1>{html.escape(title)}</h1>
+    <p><em>Snapshot from repository file "{html.escape(src)}", last updated {updated}</em></p>
+    <pre>{escaped}</pre>
+  </div>
+</body>
+</html>
+"""
+pathlib.Path(dest).write_text(template, encoding="utf-8")
+PY
+              DOC_SECTION_HTML="${DOC_SECTION_HTML}                      <li><a href=\"docs/${slug}.html\" target=\"_blank\" rel=\"noopener\">${title}</a></li>
+"
+              DOC_SOURCES_FOUND=$((DOC_SOURCES_FOUND + 1))
+            fi
+          done <<'DOCS'
+SECURITY.md|Security Policy|security-policy
+LICENSES.md|License Information|license-information
+.github/ENHANCEMENTS.md|Security Enhancements|security-enhancements
+README.md|Project Overview|project-overview
+DOCS
+
+          if [ "$DOC_SOURCES_FOUND" -eq 0 ]; then
+            DOC_SECTION_HTML='                      <li>Documentation snapshots were not generated for this run.</li>
+'
+          fi
+
+          REF_FALLBACK="${GITHUB_REF:-""}"
+          SOURCE_WORKFLOW="${GITHUB_WORKFLOW:-"Publish SBOM"}"
+          SOURCE_RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          SOURCE_EVENT="${GITHUB_EVENT_NAME}"
+          SOURCE_RUN_ID="${GITHUB_RUN_ID}"
+          HEAD_BRANCH="${GITHUB_REF_NAME:-${REF_FALLBACK##*/}}"
+          HEAD_SHA="${GITHUB_SHA:-""}"
+          RUN_CONCLUSION="pending"
+          RUN_STARTED_AT_FMT=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_run" ]; then
+            SOURCE_WORKFLOW=$(jq -r '.workflow_run.name // "Publish Container Images"' "$GITHUB_EVENT_PATH")
+            SOURCE_RUN_ID=$(jq -r '.workflow_run.id // ""' "$GITHUB_EVENT_PATH")
+            SOURCE_EVENT=$(jq -r '.workflow_run.event // "workflow_run"' "$GITHUB_EVENT_PATH")
+            SOURCE_RUN_URL=$(jq -r '.workflow_run.html_url // ""' "$GITHUB_EVENT_PATH")
+            HEAD_SHA=$(jq -r '.workflow_run.head_sha // ""' "$GITHUB_EVENT_PATH")
+            HEAD_BRANCH=$(jq -r '.workflow_run.head_branch // ""' "$GITHUB_EVENT_PATH")
+            RUN_CONCLUSION=$(jq -r '.workflow_run.conclusion // ""' "$GITHUB_EVENT_PATH")
+            RUN_STARTED_AT=$(jq -r '.workflow_run.run_started_at // ""' "$GITHUB_EVENT_PATH")
+            if [ -n "$RUN_STARTED_AT" ] && [ "$RUN_STARTED_AT" != "null" ]; then
+              RUN_STARTED_AT_FMT=$(date -d "$RUN_STARTED_AT" '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null || echo "$RUN_STARTED_AT")
+            fi
+          fi
+
+          SOURCE_WORKFLOW=${SOURCE_WORKFLOW:-"Unknown workflow"}
+          SOURCE_RUN_URL=${SOURCE_RUN_URL:-"#"}
+          SOURCE_EVENT=${SOURCE_EVENT:-"Unknown"}
+          SOURCE_RUN_ID=${SOURCE_RUN_ID:-"N/A"}
+          HEAD_SHA=${HEAD_SHA:-"Unknown"}
+          HEAD_BRANCH=${HEAD_BRANCH:-"Unknown"}
+          RUN_CONCLUSION=${RUN_CONCLUSION:-"Unknown"}
+
+          SHORT_SHA=$(printf '%.7s' "$HEAD_SHA")
+          COMMIT_URL=""
+          if [ "$HEAD_SHA" != "Unknown" ]; then
+            COMMIT_URL="https://github.com/${GITHUB_REPOSITORY}/commit/${HEAD_SHA}"
+          fi
+
+          COMMIT_HTML="<code>${SHORT_SHA}</code>"
+          if [ -n "$COMMIT_URL" ]; then
+            COMMIT_HTML="<a href=\"${COMMIT_URL}\"><code>${SHORT_SHA}</code></a>"
+          fi
+
+          WORKFLOW_LINK_HTML="${SOURCE_WORKFLOW}"
+          if [ -n "$SOURCE_RUN_URL" ] && [ "$SOURCE_RUN_URL" != "#" ]; then
+            WORKFLOW_LINK_HTML="<a href=\"${SOURCE_RUN_URL}\">${SOURCE_WORKFLOW}</a>"
+          fi
+
+          RUN_LINK_HTML="${SOURCE_RUN_ID}"
+          if [ -n "$SOURCE_RUN_ID" ] && [ "$SOURCE_RUN_ID" != "N/A" ] && [ -n "$SOURCE_RUN_URL" ] && [ "$SOURCE_RUN_URL" != "#" ]; then
+            RUN_LINK_HTML="<a href=\"${SOURCE_RUN_URL}\">${SOURCE_RUN_ID}</a>"
+          fi
+
+          PAGE_GENERATED_AT=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          declare -A IMAGE_SEEN=()
+          IMAGE_LIST_HTML=""
+
+          shopt -s nullglob
+          sbom_files=(public/sbom/*.spdx.json)
+          shopt -u nullglob
+
           cat > public/index.html <<'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -142,12 +287,95 @@ jobs:
                       margin: 20px 0;
                       border-radius: 4px;
                   }
+                  .meta-grid {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                      gap: 15px;
+                      margin: 20px 0;
+                  }
+                  .meta-grid div {
+                      background: #f8f9fa;
+                      padding: 12px;
+                      border-radius: 4px;
+                      border-left: 4px solid #0066cc;
+                  }
+                  .meta-label {
+                      font-size: 12px;
+                      text-transform: uppercase;
+                      letter-spacing: 0.05em;
+                      color: #555;
+                  }
+                  .meta-note {
+                      font-size: 14px;
+                      color: #555;
+                  }
+                  .sbom-card {
+                      background: #ffffff;
+                      border-radius: 6px;
+                      border: 1px solid #e1e1e1;
+                      padding: 20px;
+                      margin-bottom: 20px;
+                  }
+                  .sbom-card__header {
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      gap: 12px;
+                      flex-wrap: wrap;
+                  }
+                  .sbom-card__header h3 {
+                      margin: 0;
+                  }
+                  .filename {
+                      color: #777;
+                      margin: 4px 0 0 0;
+                      font-size: 14px;
+                  }
+                  .sbom-card__actions {
+                      text-align: right;
+                  }
+                  .btn {
+                      background: #0066cc;
+                      color: white;
+                      padding: 8px 14px;
+                      border-radius: 4px;
+                      text-decoration: none;
+                      font-size: 14px;
+                      display: inline-block;
+                  }
+                  .filesize {
+                      display: block;
+                      font-size: 12px;
+                      color: #444;
+                      margin-top: 4px;
+                  }
+                  .stats-grid {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                      gap: 12px;
+                      margin: 20px 0;
+                  }
+                  .stats-grid div {
+                      background: #f8f9fa;
+                      border-radius: 4px;
+                      padding: 10px;
+                      border-left: 4px solid #28a745;
+                  }
+                  details {
+                      margin-top: 10px;
+                  }
+                  details summary {
+                      cursor: pointer;
+                      font-weight: 600;
+                  }
               </style>
           </head>
           <body>
               <div class="container">
                   <h1>🔐 Apache Jena Docker - Software Supply Chain Transparency</h1>
+          EOF
 
+          cat >> public/index.html <<EOF
                   <p>
                       <span class="badge badge-success">BSI TR-03183 Compliant</span>
                       <span class="badge badge-info">SLSA Level 3</span>
@@ -161,51 +389,216 @@ jobs:
                       industry best practices.
                   </div>
 
-                  <h2>📋 Software Bill of Materials (SBOM)</h2>
-                  <p>SPDX-format SBOMs are generated for every build and attached to container images.</p>
+                  <h2>🧾 Latest Build Metadata</h2>
+                  <div class="meta-grid">
+                      <div>
+                          <span class="meta-label">Workflow</span><br>
+                          ${WORKFLOW_LINK_HTML}
+                      </div>
+                      <div>
+                          <span class="meta-label">Source Run ID</span><br>
+                          ${RUN_LINK_HTML}
+                      </div>
+                      <div>
+                          <span class="meta-label">Event</span><br>
+                          <strong>${SOURCE_EVENT}</strong>
+                      </div>
+                      <div>
+                          <span class="meta-label">Commit</span><br>
+                          ${COMMIT_HTML}
+                      </div>
+                      <div>
+                          <span class="meta-label">Branch</span><br>
+                          <strong>${HEAD_BRANCH}</strong>
+                      </div>
+                      <div>
+                          <span class="meta-label">Conclusion</span><br>
+                          <strong>${RUN_CONCLUSION}</strong>
+                      </div>
+                      <div>
+                          <span class="meta-label">Started</span><br>
+                          <strong>${RUN_STARTED_AT_FMT}</strong>
+                      </div>
+                  </div>
 
+                  <p class="meta-note">
+                      Provenance attestations reference commit <code>${SHORT_SHA}</code> on branch <code>${HEAD_BRANCH}</code>.
+                  </p>
+
+                  <h2>📋 Software Bill of Materials (SBOM)</h2>
+                  <p>Each SBOM below is generated directly from the published container image, with key metadata extracted for quick auditing.</p>
+          EOF
+
+          if [ ${#sbom_files[@]} -gt 0 ]; then
+            for sbom in "${sbom_files[@]}"; do
+              filename=$(basename "$sbom")
+              doc_name=$(jq -r '.name // "SBOM Document"' "$sbom")
+              doc_created=$(jq -r '.creationInfo.created // "Timestamp unavailable"' "$sbom")
+              doc_creators=$(jq -r '(.creationInfo.creators // []) | join(", ")' "$sbom")
+              [ -n "$doc_creators" ] && [ "$doc_creators" != "null" ] || doc_creators="Unavailable"
+              package_count=$(jq -r '((.packages // []) | length)' "$sbom")
+              license_info=$(jq -r '
+                (.packages // [])
+                | map(.licenseConcluded? // empty)
+                | map(select(. != "" and . != "NOASSERTION" and . != "NONE"))
+                | group_by(.)
+                | map({license: .[0], count: length})
+                | sort_by(.count) | reverse
+                | .[0:3]
+                | map("\(.license) (\(.count))")
+                | join(", ")
+              ' "$sbom")
+              top_components=$(jq -r '
+                (.packages // [])
+                | map(.name? // empty)
+                | map(select(. != ""))
+                | unique
+                | .[0:5]
+                | join(", ")
+              ' "$sbom")
+              image_ref=$(jq -r '
+                first(
+                  (.packages // [])[]?
+                  | (.externalRefs // [])[]?
+                  | select(((.referenceType // "") | ascii_downcase) == "pkg:oci"
+                           or ((.referenceType // "") | ascii_downcase) == "oci:subject")
+                  | .referenceLocator
+                )
+              ' "$sbom")
+              if [ -z "$image_ref" ] || [ "$image_ref" = "null" ]; then
+                image_ref=$(jq -r 'first((.packages // [])[]? | select(.name? | test("^ghcr\\.io/")) | .name)' "$sbom")
+              fi
+              if [ -z "$image_ref" ] || [ "$image_ref" = "null" ]; then
+                image_ref="Unknown image reference"
+              fi
+              if [ -z "$license_info" ] || [ "$license_info" = "null" ]; then
+                license_info="License data unavailable"
+              fi
+              if [ -z "$top_components" ] || [ "$top_components" = "null" ]; then
+                top_components="See full SBOM for component list"
+              fi
+              if [ -z "$doc_created" ] || [ "$doc_created" = "null" ]; then
+                doc_created="Timestamp unavailable"
+              fi
+              sbom_size=$(stat -c '%s' "$sbom")
+              if command -v numfmt >/dev/null 2>&1; then
+                sbom_size_hr=$(numfmt --to=iec --suffix=B "$sbom_size")
+              else
+                sbom_size_hr="${sbom_size} bytes"
+              fi
+              sbom_sha=$(sha256sum "$sbom" | awk '{print $1}')
+              digest="Unavailable"
+              if [[ "$image_ref" == *@sha256:* ]]; then
+                digest="${image_ref##*@}"
+              fi
+
+              doc_name_html=$(html_escape "$doc_name")
+              doc_creators_html=$(html_escape "$doc_creators")
+              license_info_html=$(html_escape "$license_info")
+              top_components_html=$(html_escape "$top_components")
+              image_ref_html=$(html_escape "$image_ref")
+
+              if [ "$image_ref" != "Unknown image reference" ] && [ -z "${IMAGE_SEEN[$image_ref]+x}" ]; then
+                IMAGE_SEEN[$image_ref]=1
+                image_ref_list_html=$(html_escape "$image_ref")
+                IMAGE_LIST_HTML+="                      <li>🐳 <code>${image_ref_list_html}</code></li>\n"
+              fi
+
+              cat >> public/index.html <<EOF
+                  <div class="sbom-card">
+                      <div class="sbom-card__header">
+                          <div>
+                              <h3>${doc_name_html}</h3>
+                              <p class="filename">${filename}</p>
+                          </div>
+                          <div class="sbom-card__actions">
+                              <a class="btn" href="sbom/${filename}" download>Download JSON</a>
+                              <span class="filesize">${sbom_size_hr}</span>
+                          </div>
+                      </div>
+                      <div class="stats-grid">
+                          <div>
+                              <span class="meta-label">Image Reference</span><br>
+                              <code>${image_ref_html}</code>
+                          </div>
+                          <div>
+                              <span class="meta-label">Packages</span><br>
+                              <strong>${package_count}</strong>
+                          </div>
+                          <div>
+                              <span class="meta-label">Document Created</span><br>
+                              <strong>${doc_created}</strong>
+                          </div>
+                          <div>
+                              <span class="meta-label">Creators</span><br>
+                              <strong>${doc_creators_html}</strong>
+                          </div>
+                          <div>
+                              <span class="meta-label">SBOM SHA256</span><br>
+                              <code>${sbom_sha}</code>
+                          </div>
+                          <div>
+                              <span class="meta-label">Digest</span><br>
+                              <code>${digest}</code>
+                          </div>
+                          <div>
+                              <span class="meta-label">Top Licenses</span><br>
+                              <strong>${license_info_html}</strong>
+                          </div>
+                      </div>
+                      <details>
+                          <summary>Component Highlights</summary>
+                          <p>${top_components_html}</p>
+                      </details>
+                  </div>
+          EOF
+            done
+          else
+            cat >> public/index.html <<'EOF'
+                  <div class="info-box">
+                      <strong>No SBOM artifacts found.</strong><br>
+                      The upstream container build did not upload SBOM files for this run.
+                  </div>
+          EOF
+          fi
+
+          cat >> public/index.html <<'EOF'
+                  <h2>📦 Container Images</h2>
                   <ul class="artifact-list">
           EOF
 
-          # Add SBOM files to index
-          if [ -d "public/sbom" ]; then
-            for sbom in public/sbom/*.spdx.json; do
-              if [ -f "$sbom" ]; then
-                filename=$(basename "$sbom")
-                echo "                      <li>📄 <a href=\"sbom/$filename\">$filename</a></li>" >> public/index.html
-              fi
-            done
+          if [ -n "$IMAGE_LIST_HTML" ]; then
+            printf '%b' "$IMAGE_LIST_HTML" >> public/index.html
+          else
+            cat >> public/index.html <<'EOF'
+                      <li>No image references were discovered inside the SBOM metadata.</li>
+          EOF
           fi
 
           cat >> public/index.html <<'EOF'
                   </ul>
+          EOF
 
-                  <h2>🔍 Accessing Attestations from Container Images</h2>
-
-                  <h3>View Image Attestations</h3>
+          cat >> public/index.html <<EOF
+                  <h2>🔍 Supply Chain Evidence</h2>
+                  <div class="info-box">
+                      <strong>Attestation Summary</strong>
+                      <ul>
+                          <li><strong>Workflow:</strong> ${WORKFLOW_LINK_HTML} (${SOURCE_EVENT})</li>
+                          <li><strong>Run ID:</strong> ${RUN_LINK_HTML}</li>
+                          <li><strong>Commit:</strong> ${COMMIT_HTML}</li>
+                          <li><strong>Conclusion:</strong> ${RUN_CONCLUSION}</li>
+                      </ul>
+                      All container signatures and SLSA attestations reference the metadata above.
+                  </div>
+                  <p>Independent verification commands (optional):</p>
                   <pre>docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:5.6.0 --format "{{json .Attestations}}"</pre>
-
-                  <h3>Extract SBOM</h3>
                   <pre>syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0 -o spdx-json</pre>
-
-                  <h3>Verify Build Provenance (with cosign)</h3>
                   <pre>cosign verify-attestation --type slsaprovenance ghcr.io/senticor-ai/jena-fuseki:5.6.0</pre>
-
-                  <h2>📦 Container Images</h2>
-                  <ul class="artifact-list">
-                      <li>
-                          🐳 <strong>Jena CLI Tools</strong><br>
-                          <code>ghcr.io/senticor-ai/jena:5.6.0</code>
-                      </li>
-                      <li>
-                          🐳 <strong>Fuseki Server</strong><br>
-                          <code>ghcr.io/senticor-ai/jena-fuseki:5.6.0</code>
-                      </li>
-                  </ul>
 
                   <h2>🛡️ Security Features</h2>
                   <ul>
-                      <li>✅ SBOM in SPDX 2.3 format</li>
+                      <li>✅ SBOM in SPDX 2.3 format (linked above)</li>
                       <li>✅ SLSA Build Provenance (Level 3)</li>
                       <li>✅ Cryptographically signed with Sigstore</li>
                       <li>✅ Weekly vulnerability scanning with Trivy</li>
@@ -214,11 +607,12 @@ jobs:
                   </ul>
 
                   <h2>📚 Documentation</h2>
+                  <p>Local HTML snapshots of key documentation files from this repository.</p>
                   <ul class="artifact-list">
-                      <li><a href="https://github.com/Senticor-ai/jena-docker/blob/main/SECURITY.md">Security Policy</a></li>
-                      <li><a href="https://github.com/Senticor-ai/jena-docker/blob/main/LICENSES.md">License Information</a></li>
-                      <li><a href="https://github.com/Senticor-ai/jena-docker/blob/main/.github/ENHANCEMENTS.md">Security Enhancements</a></li>
-                      <li><a href="https://github.com/Senticor-ai/jena-docker">GitHub Repository</a></li>
+EOF
+          printf '%b' "$DOC_SECTION_HTML" >> public/index.html
+          cat >> public/index.html <<EOF
+                      <li><a href="https://github.com/${GITHUB_REPOSITORY}" target="_blank" rel="noopener">GitHub Repository</a></li>
                   </ul>
 
                   <h2>✅ Compliance</h2>
@@ -235,8 +629,8 @@ jobs:
                   <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;">
 
                   <p style="color: #666; font-size: 14px;">
-                      Last updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")<br>
-                      Repository: <a href="https://github.com/Senticor-ai/jena-docker">Senticor-ai/jena-docker</a>
+                      Last updated: ${PAGE_GENERATED_AT}<br>
+                      Repository: <a href="https://github.com/${GITHUB_REPOSITORY}">${GITHUB_REPOSITORY}</a>
                   </p>
               </div>
           </body>
