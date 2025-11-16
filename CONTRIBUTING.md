@@ -104,6 +104,10 @@ When you touch SBOM generation, attestations, or documentation that feeds the tr
 The `Collect supply-chain evidence` step now lives in `.github/scripts/collect-supply-chain-evidence.sh`, so you can run the exact logic locally:
 
 ```bash
+# One-time setup
+cp .env.example .env              # fill in GHCR username/token + preferences
+.github/scripts/run-local-transparency.sh
+
 # Needs Docker Buildx, Syft, and Cosign on PATH and an authenticated GHCR session
 docker login ghcr.io -u YOUR_USER -p <PAT-with-read:packages>
 
@@ -124,9 +128,15 @@ CONTAINER_CLI=podman \
 REGISTRY=ghcr.io/senticor-ai \
 GITHUB_REPOSITORY=Senticor-ai/jena-docker \
 .github/scripts/collect-supply-chain-evidence.sh
+
+# Override the image reference entirely (use a locally built/tagged image)
+JENA_IMAGE_REF=localhost/jena:test \
+.github/scripts/collect-supply-chain-evidence.sh
 ```
 
 Set `CONTAINER_CLI=nerdctl` (or any CLI that supports Docker Buildx) if you want to exercise the `buildx imagetools` call without Docker itself. With `CONTAINER_CLI=podman` the script automatically pulls the image, feeds Syft using the `podman:` source, and disables the imagetools step (Podman does not provide it). The script captures each command’s output under `supply-chain-data/` so you can inspect failures before pushing.
+
+The `.env.example` file documents every supported variable (registry URL, repository, container CLI, versions, GHCR credentials, etc.). Copy it to `.env`, update the values once, and the `run-local-transparency.sh` harness will load it automatically, log into ghcr.io if credentials are provided, lint workflows, and run the supply-chain evidence script with the exact same behavior as CI.
 
 #### Workflow linting
 

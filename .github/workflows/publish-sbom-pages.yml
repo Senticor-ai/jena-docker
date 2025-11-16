@@ -91,6 +91,7 @@ jobs:
           JENA_VERSION: ${{ steps.versions.outputs.jena_version }}
           FUSEKI_VERSION: ${{ steps.versions.outputs.fuseki_version }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          IMAGETOOLS_OPTIONAL: 1
         run: .github/scripts/collect-supply-chain-evidence.sh
 
       - name: Download SBOM artifacts

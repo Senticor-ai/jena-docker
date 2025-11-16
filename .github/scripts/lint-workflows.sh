@@ -24,7 +24,7 @@ ACTIONLINT_VERSION="1.7.1"
 LOCAL_ACTIONLINT="${TOOLS_DIR}/actionlint"
 
 log() {
-  printf '[lint-workflows] %s\n' "$*"
+  printf '[lint-workflows] %s\n' "$*" >&2
 }
 
 # shellcheck disable=SC2120

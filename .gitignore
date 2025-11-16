@@ -1,2 +1,5 @@
 # Local helper binaries downloaded at runtime
 .github/tools/
+
+# Developer-specific environment config
+.env

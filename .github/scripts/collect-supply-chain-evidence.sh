@@ -46,6 +46,8 @@ if [ "$CONTAINER_CLI" = "podman" ] && [ "$SKIP_IMAGETOOLS" != "1" ]; then
   SKIP_IMAGETOOLS=1
 fi
 
+IMAGETOOLS_OPTIONAL=${IMAGETOOLS_OPTIONAL:-0}
+
 if [ -z "${GITHUB_REPOSITORY:-}" ]; then
   remote_url=$(git config --get remote.origin.url 2>/dev/null || true)
   if [[ "$remote_url" =~ github.com[:/]+([^/]+/[^/.]+) ]]; then
@@ -95,6 +97,9 @@ run_and_capture() {
     local status=$?
     echo "::error ::${description} failed (see ${output_file})" >&2
     tail -n 50 "$output_file" >&2 || true
+    if grep -qi 'denied' "$output_file"; then
+      echo "::error ::Registry denied access. Ensure your ghcr.io credentials (.env GHCR_USERNAME/GHCR_TOKEN) have read:packages scope and access to ${REGISTRY} images." >&2
+    fi
     return $status
   fi
 }
@@ -109,7 +114,12 @@ process_image() {
     exit 1
   fi
 
+  local override_var
+  override_var=$(printf '%s_IMAGE_REF' "$(echo "$image" | tr '[:lower:]' '[:upper:]' | tr '-' '_')")
   local ref="${REGISTRY}/${image}:${version_value}"
+  if [ -n "${!override_var:-}" ]; then
+    ref=${!override_var}
+  fi
   local attestation_file="supply-chain-data/${image}-attestations.json"
   local syft_file="supply-chain-data/${image}-syft.spdx.json"
   local cosign_file="supply-chain-data/${image}-cosign.txt"
@@ -125,8 +135,18 @@ process_image() {
   if [ "$SKIP_IMAGETOOLS" = "1" ]; then
     echo "Skipping imagetools inspect for ${ref} (SKIP_IMAGETOOLS=1)"
   else
+    set +e
     run_and_capture "$attestation_file" "${CONTAINER_CLI} buildx imagetools inspect" \
       "$CONTAINER_CLI" buildx imagetools inspect "$ref" --format '{{json .Attestations}}'
+    imagetools_status=$?
+    set -e
+    if [ $imagetools_status -ne 0 ]; then
+      if [ "$IMAGETOOLS_OPTIONAL" = "1" ]; then
+        echo "::warning ::${CONTAINER_CLI} buildx imagetools inspect failed for ${ref}; continuing because IMAGETOOLS_OPTIONAL=1" >&2
+      else
+        return $imagetools_status
+      fi
+    fi
   fi
   run_and_capture "$syft_file" "syft packages" \
     syft packages "$syft_source" -o spdx-json
