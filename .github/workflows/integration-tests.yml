@@ -70,29 +70,45 @@ jobs:
       - name: Wait for Fuseki to be ready
         run: |
           echo "Waiting for Fuseki initialization to complete..."
+          FOUND=false
           for i in {1..60}; do
             if docker logs fuseki-test 2>&1 | grep -q "Fuseki is available"; then
-              echo "Fuseki is fully initialized!"
-              sleep 2  # Grace period for final setup
+              echo "✓ Found 'Fuseki is available' message at attempt $i"
+              FOUND=true
+              sleep 3  # Grace period for final setup
               break
             fi
-            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
             sleep 2
           done
-          echo "=== Fuseki logs ==="
-          docker logs fuseki-test
+
+          echo "=== Full Fuseki logs ==="
+          docker logs fuseki-test 2>&1
+          echo "=== End logs ==="
+
+          if [ "$FOUND" = "false" ]; then
+            echo "ERROR: Never saw 'Fuseki is available' message after 120 seconds"
+            exit 1
+          fi
 
       - name: Test Fuseki ping endpoint
         run: |
-          curl -f http://localhost:3030/$/ping
+          echo "Testing ping endpoint..."
+          curl -v http://localhost:3030/$/ping
 
       - name: Test Fuseki UI is accessible
         run: |
-          curl -sf http://localhost:3030/ | grep -i fuseki
+          echo "Testing UI..."
+          curl -v http://localhost:3030/ | grep -i fuseki
+
+      - name: Debug - Check shiro.ini
+        run: |
+          echo "=== Checking shiro.ini in container ==="
+          docker exec fuseki-test cat /fuseki/shiro.ini || echo "Could not read shiro.ini"
 
       - name: Test admin authentication
         run: |
-          curl -sf -u admin:testpass123 http://localhost:3030/$/server
+          echo "Testing admin auth with testpass123..."
+          curl -v -u admin:testpass123 http://localhost:3030/$/server
 
       - name: Create test dataset via API
         run: |
