@@ -69,11 +69,21 @@ jobs:
 
       - name: Wait for Fuseki to be ready
         run: |
-          timeout 30 bash -c 'until curl -sf http://localhost:3030/$/ping; do sleep 1; done'
+          echo "Waiting for Fuseki to start..."
+          sleep 5
+          for i in {1..30}; do
+            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
+              echo "Fuseki is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Fuseki not ready yet..."
+            sleep 2
+          done
+          docker logs fuseki-test
 
       - name: Test Fuseki ping endpoint
         run: |
-          curl -sf http://localhost:3030/$/ping
+          curl -f http://localhost:3030/$/ping
 
       - name: Test Fuseki UI is accessible
         run: |
@@ -119,8 +129,17 @@ jobs:
 
       - name: Verify admin password was set correctly
         run: |
-          docker logs fuseki-test 2>&1 | grep -v "admin=testpass123" # Should NOT appear in logs
-          docker logs fuseki-test 2>&1 | grep -v "Randomly generated" # Should NOT appear when password is set
+          # Password should NOT appear in logs
+          if docker logs fuseki-test 2>&1 | grep -q "admin=testpass123"; then
+            echo "ERROR: Password exposed in logs!"
+            exit 1
+          fi
+          # Should NOT see "Randomly generated" when password is explicitly set
+          if docker logs fuseki-test 2>&1 | grep -q "Randomly generated"; then
+            echo "ERROR: Random password generated despite ADMIN_PASSWORD being set!"
+            exit 1
+          fi
+          echo "Password handling verified correctly"
 
       - name: Stop and cleanup
         if: always()
@@ -148,7 +167,17 @@ jobs:
 
       - name: Wait for Fuseki to be ready
         run: |
-          timeout 30 bash -c 'until curl -sf http://localhost:3030/$/ping; do sleep 1; done'
+          echo "Waiting for Fuseki to start..."
+          sleep 5
+          for i in {1..30}; do
+            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
+              echo "Fuseki is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Fuseki not ready yet..."
+            sleep 2
+          done
+          docker logs fuseki-tdb2
 
       - name: Verify TDB2 dataset was created
         run: |
@@ -188,7 +217,17 @@ jobs:
 
       - name: Wait for startup
         run: |
-          timeout 30 bash -c 'until curl -sf http://localhost:3030/$/ping; do sleep 1; done'
+          echo "Waiting for Fuseki to start..."
+          sleep 5
+          for i in {1..30}; do
+            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
+              echo "Fuseki is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Fuseki not ready yet..."
+            sleep 2
+          done
+          docker logs fuseki-persist
 
       - name: Create dataset and add data
         run: |
@@ -215,7 +254,17 @@ jobs:
 
       - name: Wait for startup
         run: |
-          timeout 30 bash -c 'until curl -sf http://localhost:3030/$/ping; do sleep 1; done'
+          echo "Waiting for Fuseki to start..."
+          sleep 5
+          for i in {1..30}; do
+            if curl -f http://localhost:3030/$/ping 2>/dev/null; then
+              echo "Fuseki is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Fuseki not ready yet..."
+            sleep 2
+          done
+          docker logs fuseki-persist2
 
       - name: Verify data persisted
         run: |
