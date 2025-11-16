@@ -170,9 +170,9 @@ jobs:
                 echo '                              <summary>View captured output</summary>'
                 echo '                              <pre>'
               } >> "$HTML_DEST"
-              python3 - "$file" <<'PY' >> "$HTML_DEST"
-import html, pathlib, sys
-path = pathlib.Path(sys.argv[1])
+              EVIDENCE_SOURCE="$file" python3 >> "$HTML_DEST" <<'PY'
+import html, pathlib, os
+path = pathlib.Path(os.environ["EVIDENCE_SOURCE"])
 print(html.escape(path.read_text()))
 PY
               {
@@ -194,10 +194,11 @@ PY
             [ -n "$src" ] || continue
             if [ -f "$src" ]; then
               dest="public/docs/${slug}.html"
-              python3 - "$src" "$dest" "$title" <<'PY'
-import html, pathlib, sys, datetime
-src, dest, title = sys.argv[1:4]
-path = pathlib.Path(src)
+              DOC_SOURCE="$src" DOC_DEST="$dest" DOC_TITLE="$title" python3 <<'PY'
+import html, os, pathlib, datetime
+path = pathlib.Path(os.environ["DOC_SOURCE"])
+dest = pathlib.Path(os.environ["DOC_DEST"])
+title = os.environ["DOC_TITLE"]
 text = path.read_text(encoding="utf-8")
 escaped = html.escape(text)
 updated = datetime.datetime.utcfromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -249,7 +250,7 @@ template = f"""<!DOCTYPE html>
 </body>
 </html>
 """
-pathlib.Path(dest).write_text(template, encoding="utf-8")
+dest.write_text(template, encoding="utf-8")
 PY
               DOC_SECTION_HTML="${DOC_SECTION_HTML}                      <li><a href=\"docs/${slug}.html\" target=\"_blank\" rel=\"noopener\">${title}</a></li>
 "
