@@ -59,10 +59,25 @@ RUN     (curl --location --silent --show-error --fail --retry-connrefused --retr
     rm fuseki.tar.gz* && \
     cd $FUSEKI_HOME && rm -rf fuseki.war && chmod 755 fuseki-server
 
-# Test the install by testing it's ping resource. 20s sleep because Docker Hub.
-RUN  $FUSEKI_HOME/fuseki-server & \
-    sleep 20 && \
-    curl -sS --fail 'http://localhost:3030/$/ping' 
+# Test the install by testing its ping resource. Allow extra time on slow builders.
+RUN set -eux; \
+    $FUSEKI_HOME/fuseki-server >/tmp/fuseki.log 2>&1 & \
+    pid="$!"; \
+    success=0; \
+    for i in $(seq 1 30); do \
+        sleep 5; \
+        if curl -sS --fail 'http://localhost:3030/$/ping'; then \
+            success=1; \
+            break; \
+        fi; \
+    done; \
+    kill "$pid" 2>/dev/null || true; \
+    wait "$pid" || true; \
+    if [ "$success" -ne 1 ]; then \
+        echo "Fuseki failed to start; last log lines:" >&2; \
+        tail -n 200 /tmp/fuseki.log >&2 || true; \
+        exit 1; \
+    fi
 
 # No need to kill Fuseki as our shell will exit after curl
 
@@ -99,4 +114,3 @@ USER fuseki
 
 ENTRYPOINT ["/sbin/tini", "--", "sh", "/docker-entrypoint.sh"]
 CMD ["/jena-fuseki/fuseki-server"]
-
