@@ -70,15 +70,21 @@ jobs:
       - name: Wait for Fuseki to be ready
         run: |
           echo "Waiting for Fuseki to start..."
-          sleep 5
+          sleep 10
           for i in {1..30}; do
             if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Fuseki is ready!"
-              break
+              echo "Ping endpoint responding, waiting for admin setup..."
+              sleep 3
+              # Test if admin endpoint is ready
+              if curl -f -u admin:testpass123 http://localhost:3030/$/server 2>/dev/null; then
+                echo "Fuseki is fully ready with admin auth!"
+                break
+              fi
             fi
-            echo "Attempt $i/30: Fuseki not ready yet..."
+            echo "Attempt $i/30: Fuseki not fully ready yet..."
             sleep 2
           done
+          echo "=== Fuseki logs ==="
           docker logs fuseki-test
 
       - name: Test Fuseki ping endpoint
@@ -168,15 +174,21 @@ jobs:
       - name: Wait for Fuseki to be ready
         run: |
           echo "Waiting for Fuseki to start..."
-          sleep 5
+          sleep 10
           for i in {1..30}; do
             if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Fuseki is ready!"
-              break
+              echo "Ping endpoint responding, waiting for admin setup..."
+              sleep 3
+              # Test if admin endpoint is ready
+              if curl -f -u admin:testpass http://localhost:3030/$/datasets 2>/dev/null; then
+                echo "Fuseki is fully ready with admin auth!"
+                break
+              fi
             fi
-            echo "Attempt $i/30: Fuseki not ready yet..."
+            echo "Attempt $i/30: Fuseki not fully ready yet..."
             sleep 2
           done
+          echo "=== Fuseki logs ==="
           docker logs fuseki-tdb2
 
       - name: Verify TDB2 dataset was created
@@ -218,15 +230,21 @@ jobs:
       - name: Wait for startup
         run: |
           echo "Waiting for Fuseki to start..."
-          sleep 5
+          sleep 10
           for i in {1..30}; do
             if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Fuseki is ready!"
-              break
+              echo "Ping endpoint responding, waiting for admin setup..."
+              sleep 3
+              # Test if admin endpoint is ready
+              if curl -f -u admin:testpass http://localhost:3030/$/datasets 2>/dev/null; then
+                echo "Fuseki is fully ready with admin auth!"
+                break
+              fi
             fi
-            echo "Attempt $i/30: Fuseki not ready yet..."
+            echo "Attempt $i/30: Fuseki not fully ready yet..."
             sleep 2
           done
+          echo "=== Fuseki logs ==="
           docker logs fuseki-persist
 
       - name: Create dataset and add data
@@ -252,18 +270,24 @@ jobs:
             -v fuseki-test-vol:/fuseki \
             jena-fuseki:test
 
-      - name: Wait for startup
+      - name: Wait for startup after restart
         run: |
           echo "Waiting for Fuseki to start..."
-          sleep 5
+          sleep 10
           for i in {1..30}; do
             if curl -f http://localhost:3030/$/ping 2>/dev/null; then
-              echo "Fuseki is ready!"
-              break
+              echo "Ping endpoint responding, waiting for admin setup..."
+              sleep 3
+              # Test if admin endpoint is ready
+              if curl -f -u admin:testpass http://localhost:3030/$/datasets 2>/dev/null; then
+                echo "Fuseki is fully ready with admin auth!"
+                break
+              fi
             fi
-            echo "Attempt $i/30: Fuseki not ready yet..."
+            echo "Attempt $i/30: Fuseki not fully ready yet..."
             sleep 2
           done
+          echo "=== Fuseki logs ==="
           docker logs fuseki-persist2
 
       - name: Verify data persisted
