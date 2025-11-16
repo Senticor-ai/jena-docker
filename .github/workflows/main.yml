@@ -21,11 +21,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'ci skip')"
     steps:
       - name: Check out source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build images
         run: |
           docker build -t jena jena
@@ -36,13 +36,12 @@ jobs:
           echo "<http://example.com/a> <http://example.com/b> <http://example.com/c> ." > /tmp/example.ttl
           docker run --volume /tmp:/rdf jena riot example.ttl > /tmp/example.nq
           grep --quiet example.com /tmp/example.nq
-          sudo service docker restart ; sleep 10 # workaround for https://github.com/travis-ci/travis-ci/issues/4778
           docker run --name fuseki -p 127.0.0.1:3030:3030 -d jena-fuseki
-          sleep 8
+          sleep 10
           curl --silent --output /dev/null  --show-error -L --max-redirs 3 --retry 3 --retry-delay 4 --max-time 30 http://127.0.0.1:3030/
           docker logs fuseki
           docker logs fuseki 2>&1 | grep --quiet ^admin=
-          docker logs fuseki 2>&1 | grep --quiet Started
+          docker logs fuseki 2>&1 | grep --quiet "Fuseki is available"
           curl http://127.0.0.1:3030/ | grep --quiet Fuseki
           docker kill --signal=SIGINT `docker ps -q`
           sleep 4

@@ -1,0 +1,301 @@
+#   Licensed to the Apache Software Foundation (ASF) under one or more
+#   contributor license agreements.  See the NOTICE file distributed with
+#   this work for additional information regarding copyright ownership.
+#   The ASF licenses this file to You under the Apache License, Version 2.0
+#   (the "License"); you may not use this file except in compliance with
+#   the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+---
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-jena:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Jena image
+        run: docker build -t jena:test jena/
+
+      - name: Test riot version
+        run: |
+          docker run --rm jena:test riot --version | grep "5.6.0"
+
+      - name: Test RDF parsing (Turtle)
+        run: |
+          echo "@prefix ex: <http://example.org/> . ex:subject ex:predicate ex:object ." > /tmp/test.ttl
+          docker run --rm -v /tmp:/rdf jena:test riot test.ttl | grep "example.org"
+
+      - name: Test RDF validation
+        run: |
+          echo "INVALID RDF" > /tmp/invalid.ttl
+          docker run --rm -v /tmp:/rdf jena:test riot --validate invalid.ttl && exit 1 || echo "Correctly failed on invalid RDF"
+
+      - name: Test arq SPARQL query
+        run: |
+          echo "@prefix : <http://example.org/> . :a :b :c ." > /tmp/data.ttl
+          echo "SELECT * WHERE { ?s ?p ?o }" > /tmp/query.rq
+          docker run --rm -v /tmp:/rdf jena:test arq --data=/rdf/data.ttl --query=/rdf/query.rq | grep "example.org"
+
+  test-fuseki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Fuseki image
+        run: docker build -t jena-fuseki:test jena-fuseki/
+
+      - name: Start Fuseki with custom admin password
+        run: |
+          docker run -d --name fuseki-test \
+            -p 3030:3030 \
+            -e ADMIN_PASSWORD=testpass123 \
+            jena-fuseki:test
+
+      - name: Wait for Fuseki to be ready
+        run: |
+          echo "Waiting for Fuseki initialization to complete..."
+          FOUND=false
+          for i in {1..60}; do
+            if docker logs fuseki-test 2>&1 | grep -q "Fuseki is available"; then
+              echo "✓ Found 'Fuseki is available' message at attempt $i"
+              FOUND=true
+              sleep 3  # Grace period for final setup
+              break
+            fi
+            sleep 2
+          done
+
+          echo "=== Full Fuseki logs ==="
+          docker logs fuseki-test 2>&1
+          echo "=== End logs ==="
+
+          if [ "$FOUND" = "false" ]; then
+            echo "ERROR: Never saw 'Fuseki is available' message after 120 seconds"
+            exit 1
+          fi
+
+      - name: Test Fuseki ping endpoint
+        run: |
+          echo "Testing ping endpoint..."
+          curl -v http://localhost:3030/$/ping
+
+      - name: Test Fuseki UI is accessible
+        run: |
+          echo "Testing UI..."
+          curl -v http://localhost:3030/ | grep -i fuseki
+
+      - name: Debug - Check shiro.ini
+        run: |
+          echo "=== Checking shiro.ini in container ==="
+          docker exec fuseki-test cat /fuseki/shiro.ini || echo "Could not read shiro.ini"
+
+      - name: Test admin authentication
+        run: |
+          echo "Testing admin auth with testpass123..."
+          curl -v -u admin:testpass123 http://localhost:3030/$/server
+
+      - name: Create test dataset via API
+        run: |
+          curl -sf -X POST -u admin:testpass123 \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data "dbName=testdb&dbType=tdb2" \
+            http://localhost:3030/$/datasets
+
+      - name: Verify dataset was created
+        run: |
+          curl -sf -u admin:testpass123 http://localhost:3030/$/datasets | grep testdb
+
+      - name: Upload test data
+        run: |
+          echo "@prefix : <http://test.org/> . :subject :predicate :object ." > /tmp/test.ttl
+          curl -sf -X POST -u admin:testpass123 \
+            -H "Content-Type: text/turtle" \
+            --data-binary @/tmp/test.ttl \
+            http://localhost:3030/testdb/data
+
+      - name: Query uploaded data
+        run: |
+          curl -sf -X POST -u admin:testpass123 \
+            -H "Content-Type: application/sparql-query" \
+            --data "SELECT * WHERE { ?s ?p ?o }" \
+            http://localhost:3030/testdb/query | grep "test.org"
+
+      - name: Test stats endpoint
+        run: |
+          curl -sf -u admin:testpass123 http://localhost:3030/$/stats
+
+      - name: Check logs for errors
+        run: |
+          docker logs fuseki-test 2>&1 | grep -i "error" && exit 1 || echo "No errors in logs"
+
+      - name: Verify admin password was set correctly
+        run: |
+          # Password should NOT appear in logs
+          if docker logs fuseki-test 2>&1 | grep -q "admin=testpass123"; then
+            echo "ERROR: Password exposed in logs!"
+            exit 1
+          fi
+          # Should NOT see "Randomly generated" when password is explicitly set
+          if docker logs fuseki-test 2>&1 | grep -q "Randomly generated"; then
+            echo "ERROR: Random password generated despite ADMIN_PASSWORD being set!"
+            exit 1
+          fi
+          echo "Password handling verified correctly"
+
+      - name: Stop and cleanup
+        if: always()
+        run: |
+          docker stop fuseki-test || true
+          docker rm fuseki-test || true
+
+  test-fuseki-tdb2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Fuseki image
+        run: docker build -t jena-fuseki:test jena-fuseki/
+
+      - name: Start Fuseki with TDB2
+        run: |
+          docker run -d --name fuseki-tdb2 \
+            -p 3030:3030 \
+            -e ADMIN_PASSWORD=testpass \
+            -e TDB=2 \
+            -e FUSEKI_DATASET_1=testds \
+            jena-fuseki:test
+
+      - name: Wait for Fuseki to be ready
+        run: |
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-tdb2 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
+            fi
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
+            sleep 2
+          done
+          echo "=== Fuseki logs ==="
+          docker logs fuseki-tdb2
+
+      - name: Verify TDB2 dataset was created
+        run: |
+          curl -sf -u admin:testpass http://localhost:3030/$/datasets | grep testds
+
+      - name: Test TDB2 dataset is functional
+        run: |
+          echo "@prefix : <http://test.org/> . :a :b :c ." > /tmp/data.ttl
+          curl -sf -X POST -u admin:testpass \
+            -H "Content-Type: text/turtle" \
+            --data-binary @/tmp/data.ttl \
+            http://localhost:3030/testds/data
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop fuseki-tdb2 || true
+          docker rm fuseki-tdb2 || true
+
+  test-fuseki-persistence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Fuseki image
+        run: docker build -t jena-fuseki:test jena-fuseki/
+
+      - name: Create volume and start Fuseki
+        run: |
+          docker volume create fuseki-test-vol
+          docker run -d --name fuseki-persist \
+            -p 3030:3030 \
+            -e ADMIN_PASSWORD=testpass \
+            -v fuseki-test-vol:/fuseki \
+            jena-fuseki:test
+
+      - name: Wait for startup
+        run: |
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-persist 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
+            fi
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
+            sleep 2
+          done
+          echo "=== Fuseki logs ==="
+          docker logs fuseki-persist
+
+      - name: Create dataset and add data
+        run: |
+          curl -sf -X POST -u admin:testpass \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data "dbName=persistent&dbType=tdb2" \
+            http://localhost:3030/$/datasets
+          echo "@prefix : <http://test.org/> . :data :should :persist ." > /tmp/data.ttl
+          curl -sf -X POST -u admin:testpass \
+            -H "Content-Type: text/turtle" \
+            --data-binary @/tmp/data.ttl \
+            http://localhost:3030/persistent/data
+
+      - name: Stop container
+        run: docker stop fuseki-persist && docker rm fuseki-persist
+
+      - name: Restart with same volume
+        run: |
+          docker run -d --name fuseki-persist2 \
+            -p 3030:3030 \
+            -e ADMIN_PASSWORD=testpass \
+            -v fuseki-test-vol:/fuseki \
+            jena-fuseki:test
+
+      - name: Wait for startup after restart
+        run: |
+          echo "Waiting for Fuseki initialization to complete..."
+          for i in {1..60}; do
+            if docker logs fuseki-persist2 2>&1 | grep -q "Fuseki is available"; then
+              echo "Fuseki is fully initialized!"
+              sleep 2  # Grace period for final setup
+              break
+            fi
+            echo "Attempt $i/60: Waiting for 'Fuseki is available' message..."
+            sleep 2
+          done
+          echo "=== Fuseki logs ==="
+          docker logs fuseki-persist2
+
+      - name: Verify data persisted
+        run: |
+          curl -sf -X POST -u admin:testpass \
+            -H "Content-Type: application/sparql-query" \
+            --data "SELECT * WHERE { ?s ?p ?o }" \
+            http://localhost:3030/persistent/query | grep "persist"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop fuseki-persist2 || true
+          docker rm fuseki-persist2 || true
+          docker volume rm fuseki-test-vol || true

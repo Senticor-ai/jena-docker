@@ -15,7 +15,7 @@
 
 
 FROM eclipse-temurin:21-jre-alpine
-MAINTAINER Stian Soiland-Reyes <stain@apache.org>
+LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
 ENV LANG C.UTF-8
 RUN set -eux; \
@@ -24,10 +24,10 @@ RUN set -eux; \
     rm -rf /var/cache/apk/*
 
 
-# Update below according to https://jena.apache.org/download/ 
-# and checksum for apache-jena-fuseki-4.x.x.tar.gz.sha512
-ENV FUSEKI_SHA512 50d33937092e8120d57f503b6e96ef988894602aa060ff945ec3aecf0349b0b22250e158bb379d0300589653dc9d6f3e6eb2b9790b5125144108dd6f19dc41e6
-ENV FUSEKI_VERSION 5.1.0
+# Update below according to https://jena.apache.org/download/
+# and checksum for apache-jena-fuseki-5.x.x.tar.gz.sha512
+ENV FUSEKI_SHA512 53dfe13cdd5f6387a0c62917e275fde2cd2e2f2052bfe7515384934f24915228b8512a2dd2b50b7060cc300c976254349d991fcea239484cae48e0a59d67cd54
+ENV FUSEKI_VERSION 5.6.0
 ENV ASF_MIRROR https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
 ENV ASF_ARCHIVE https://archive.apache.org/dist/
 
@@ -80,9 +80,9 @@ COPY tdbloader2 $FUSEKI_HOME/
 RUN chmod 755 $FUSEKI_HOME/load.sh $FUSEKI_HOME/tdbloader $FUSEKI_HOME/tdbloader2
 #VOLUME /staging
 
-# Create a fuseki user and group
-RUN addgroup -S fuseki && \
-    adduser -G fuseki -S -D -H fuseki
+# Create a fuseki user and group with specific UID/GID for better Podman compatibility
+RUN addgroup -g 1000 -S fuseki && \
+    adduser -u 1000 -G fuseki -S -D -H fuseki
 
 # Where we start our server from
 WORKDIR $FUSEKI_HOME

@@ -89,9 +89,9 @@ disk space or speed requirements), specify it using `--volume`:
 Note that the `/fuseki` volume must only be accessed from a single Fuseki
 container at a time, to avoid [lock errors](https://jena.apache.org/documentation/tdb/faqs.html#lock-exception). 
 
-Within the container Fuseki runs as the `fuseki` user which typically have UID 100, this can cause a problem if you are mounting the folder from outside. You can fix permission on your `/fuseki` folder:
+Within the container Fuseki runs as the `fuseki` user which typically have UID 1000, this can cause a problem if you are mounting the folder from outside. You can fix permission on your `/fuseki` folder:
 
-    docker run --user 0 --volume /ssd/data/fuseki:/fuseki stain/jena:5.0.0 chown -R 100 /fuseki
+    docker run --user 0 --volume /ssd/data/fuseki:/fuseki stain/jena-fuseki chown -R 1000 /fuseki
 
 To check the logs for the container you gave `--name fuseki`, use:
 
@@ -239,7 +239,7 @@ If you need to modify Fuseki's configuration further, you can use the equivalent
     docker run --volumes-from fuseki-data -it ubuntu bash
 
 and inspect `/fuseki` with the shell. Remember to restart fuseki afterward:
-docker run --user 0 --volume fuseki-data:/fuseki stain/jena:5.0.0 chown -R 100 /fuseki
+
     docker restart fuseki
 
 ### Additional JARs on Fuseki classpath
