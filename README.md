@@ -52,6 +52,8 @@ This project includes:
 - 🛡️ **Security policy** with coordinated disclosure
 - 📜 **Complete license documentation**
 
+**View SBOMs and Attestations**: https://senticor-ai.github.io/jena-docker/
+
 See [SECURITY.md](SECURITY.md) and [LICENSES.md](LICENSES.md) for details.
 
 Note that although these Docker images are based on the official Apache Jena releases
