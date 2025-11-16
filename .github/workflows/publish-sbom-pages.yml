@@ -13,7 +13,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 ---
-name: Publish SBOM to GitHub Pages
+name: Publish Supply-Chain Transparency Pages
+run-name: >-
+  Publish transparency content${{
+    github.event_name == 'workflow_run'
+    && format(' (from {0})', github.event.workflow_run.name)
+    || github.event_name == 'workflow_dispatch'
+    && ' (manual dispatch)'
+    || ''
+  }}
 
 on:
   workflow_run:
