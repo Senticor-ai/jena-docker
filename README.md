@@ -52,7 +52,20 @@ This project includes:
 - 🛡️ **Security policy** with coordinated disclosure
 - 📜 **Complete license documentation**
 
-**View SBOMs and Attestations**: https://senticor-ai.github.io/jena-docker/
+### Viewing SBOMs and Attestations
+
+SBOMs and attestations are attached to the container images. You can access them using:
+
+```bash
+# View image attestations
+docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:5.6.0 --format "{{json .Attestations}}"
+
+# Extract SBOM with Syft
+syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0 -o spdx-json
+
+# Verify build provenance with cosign
+cosign verify-attestation --type slsaprovenance ghcr.io/senticor-ai/jena-fuseki:5.6.0
+```
 
 See [SECURITY.md](SECURITY.md) and [LICENSES.md](LICENSES.md) for details.
 
