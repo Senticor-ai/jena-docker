@@ -78,6 +78,7 @@ jobs:
             type=raw,value=5.6.0
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.image.context }}
