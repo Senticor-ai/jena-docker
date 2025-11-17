@@ -3,3 +3,4 @@
 
 # Developer-specific environment config
 .env
+supply-chain-data/

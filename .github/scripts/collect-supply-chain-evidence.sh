@@ -47,6 +47,7 @@ if [ "$CONTAINER_CLI" = "podman" ] && [ "$SKIP_IMAGETOOLS" != "1" ]; then
 fi
 
 IMAGETOOLS_OPTIONAL=${IMAGETOOLS_OPTIONAL:-0}
+SKIP_COSIGN=${SKIP_COSIGN:-0}
 
 if [ -z "${GITHUB_REPOSITORY:-}" ]; then
   remote_url=$(git config --get remote.origin.url 2>/dev/null || true)
@@ -124,11 +125,27 @@ process_image() {
   local syft_file="supply-chain-data/${image}-syft.spdx.json"
   local cosign_file="supply-chain-data/${image}-cosign.txt"
   local pull_file="supply-chain-data/${image}-pull.log"
-  local syft_source="$ref"
+  local save_file="supply-chain-data/${image}-image.tar"
+  local syft_source=""
+  local syft_input=""
 
-  if [ "$CONTAINER_CLI" = "podman" ]; then
+  if [[ "$ref" == localhost:* || "$ref" == 127.0.0.1:* || "$ref" == localhost/* || "$ref" == 127.0.0.1/* ]]; then
+    echo "Using local image for ${ref}; skipping registry pull"
+    syft_source="$ref"
+  elif [ "$CONTAINER_CLI" = "podman" ]; then
     run_and_capture "$pull_file" "podman pull" "$CONTAINER_CLI" pull "$ref"
     syft_source="podman:${ref}"
+  else
+    run_and_capture "$pull_file" "${CONTAINER_CLI} pull" "$CONTAINER_CLI" pull "$ref"
+    syft_source="$ref"
+  fi
+
+  if [ "$CONTAINER_CLI" = "podman" ]; then
+    echo "Saving ${ref} to ${save_file} for Syft scanning"
+    run_and_capture "${save_file}.log" "podman save" "$CONTAINER_CLI" save "$ref" --format oci-archive -o "$save_file"
+    syft_input="oci-archive:${save_file}"
+  else
+    syft_input="$syft_source"
   fi
 
   echo "::group::Collecting supply-chain data for ${ref}"
@@ -148,14 +165,23 @@ process_image() {
       fi
     fi
   fi
-  run_and_capture "$syft_file" "syft packages" \
-    syft packages "$syft_source" -o spdx-json
-  run_and_capture "$cosign_file" "cosign verify-attestation" \
-    env COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
-      --type slsaprovenance \
-      --certificate-identity-regexp "https://github.com/${GITHUB_REPOSITORY}/.+" \
-      --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-      "$ref"
+  run_and_capture "$syft_file" "syft scan" \
+    env SYFT_CHECK_FOR_APP_UPDATE=0 syft scan "$syft_input" --output "spdx-json=$syft_file"
+  local should_skip_cosign=$SKIP_COSIGN
+  if [[ "$ref" == localhost:* || "$ref" == 127.0.0.1:* || "$ref" == localhost/* || "$ref" == 127.0.0.1/* ]]; then
+    should_skip_cosign=1
+  fi
+  if [ "$should_skip_cosign" = "1" ]; then
+    echo "Skipping cosign verification for ${ref}"
+    echo "Cosign skipped for ${ref}" > "$cosign_file"
+  else
+    run_and_capture "$cosign_file" "cosign verify-attestation" \
+      env COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
+        --type slsaprovenance \
+        --certificate-identity-regexp "https://github.com/${GITHUB_REPOSITORY}/.+" \
+        --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+        "$ref"
+  fi
   echo "::endgroup::"
 }
 
