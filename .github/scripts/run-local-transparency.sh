@@ -38,8 +38,14 @@ fi
 
 CONTAINER_CLI=${CONTAINER_CLI:-docker}
 GHCR_AUTHFILE=${GHCR_AUTHFILE:-${DOCKER_CONFIG:-$HOME/.docker}/config.json}
+SKIP_GHCR_LOGIN=${SKIP_GHCR_LOGIN:-0}
 
 maybe_login_registry() {
+  if [ "$SKIP_GHCR_LOGIN" = "1" ]; then
+    log "Skipping ghcr.io login (SKIP_GHCR_LOGIN=1)"
+    return
+  fi
+
   if [ -z "${GHCR_USERNAME:-}" ] || [ -z "${GHCR_TOKEN:-}" ]; then
     return
   fi
