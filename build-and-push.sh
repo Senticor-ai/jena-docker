@@ -18,29 +18,38 @@ set -e
 
 # Configuration
 DOCKER_USERNAME="${DOCKER_USERNAME:-yourusername}"
-VERSION="5.6.0"
 CONTAINER_TOOL="${CONTAINER_TOOL:-docker}"  # Can be 'docker' or 'podman'
+
+extract_version() {
+  local dockerfile=$1
+  local env_name=$2
+  grep -m1 "ENV[[:space:]]\\+${env_name}" "$dockerfile" | cut -d= -f2 | tr -d '"' | tr -d "[:space:]"
+}
+
+JENA_VERSION="${JENA_VERSION:-$(extract_version jena/Dockerfile JENA_VERSION)}"
+FUSEKI_VERSION="${FUSEKI_VERSION:-$(extract_version jena-fuseki/Dockerfile FUSEKI_VERSION)}"
 
 echo "Using container tool: $CONTAINER_TOOL"
 echo "Docker Hub username: $DOCKER_USERNAME"
-echo "Version: $VERSION"
+echo "Jena version: $JENA_VERSION"
+echo "Fuseki version: $FUSEKI_VERSION"
 
 # Build Jena
 echo ""
 echo "Building Jena image..."
-$CONTAINER_TOOL build -t $DOCKER_USERNAME/jena:$VERSION jena/
-$CONTAINER_TOOL tag $DOCKER_USERNAME/jena:$VERSION $DOCKER_USERNAME/jena:latest
+$CONTAINER_TOOL build -t $DOCKER_USERNAME/jena:$JENA_VERSION jena/
+$CONTAINER_TOOL tag $DOCKER_USERNAME/jena:$JENA_VERSION $DOCKER_USERNAME/jena:latest
 
 # Build Jena Fuseki
 echo ""
 echo "Building Jena Fuseki image..."
-$CONTAINER_TOOL build -t $DOCKER_USERNAME/jena-fuseki:$VERSION jena-fuseki/
-$CONTAINER_TOOL tag $DOCKER_USERNAME/jena-fuseki:$VERSION $DOCKER_USERNAME/jena-fuseki:latest
+$CONTAINER_TOOL build -t $DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION jena-fuseki/
+$CONTAINER_TOOL tag $DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION $DOCKER_USERNAME/jena-fuseki:latest
 
 # Test images
 echo ""
 echo "Testing images..."
-$CONTAINER_TOOL run --rm $DOCKER_USERNAME/jena:$VERSION riot --version
+$CONTAINER_TOOL run --rm $DOCKER_USERNAME/jena:$JENA_VERSION riot --version
 echo "✓ Jena image works"
 
 # Push to registry (optional - uncomment when ready)
@@ -56,9 +65,9 @@ echo ""
 echo "✓ Build complete!"
 echo ""
 echo "Images built:"
-echo "  - $DOCKER_USERNAME/jena:$VERSION"
+echo "  - $DOCKER_USERNAME/jena:$JENA_VERSION"
 echo "  - $DOCKER_USERNAME/jena:latest"
-echo "  - $DOCKER_USERNAME/jena-fuseki:$VERSION"
+echo "  - $DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION"
 echo "  - $DOCKER_USERNAME/jena-fuseki:latest"
 echo ""
 echo "To push to Docker Hub, uncomment the push section in this script and run:"

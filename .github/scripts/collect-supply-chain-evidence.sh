@@ -123,6 +123,7 @@ process_image() {
   fi
   local attestation_file="supply-chain-data/${image}-attestations.json"
   local syft_file="supply-chain-data/${image}-syft.spdx.json"
+  local syft_cdx_file="supply-chain-data/${image}-syft.cdx.json"
   local cosign_file="supply-chain-data/${image}-cosign.txt"
   local pull_file="supply-chain-data/${image}-pull.log"
   local save_file="supply-chain-data/${image}-image.tar"
@@ -165,8 +166,10 @@ process_image() {
       fi
     fi
   fi
-  run_and_capture "$syft_file" "syft scan" \
+  run_and_capture "$syft_file" "syft scan (SPDX)" \
     env SYFT_CHECK_FOR_APP_UPDATE=0 syft scan "$syft_input" --output "spdx-json=$syft_file"
+  run_and_capture "$syft_cdx_file" "syft scan (CycloneDX)" \
+    env SYFT_CHECK_FOR_APP_UPDATE=0 syft scan "$syft_input" --output "cyclonedx-json=$syft_cdx_file"
   local should_skip_cosign=$SKIP_COSIGN
   if [[ "$ref" == localhost:* || "$ref" == 127.0.0.1:* || "$ref" == localhost/* || "$ref" == 127.0.0.1/* ]]; then
     should_skip_cosign=1
@@ -175,12 +178,36 @@ process_image() {
     echo "Skipping cosign verification for ${ref}"
     echo "Cosign skipped for ${ref}" > "$cosign_file"
   else
-    run_and_capture "$cosign_file" "cosign verify-attestation" \
-      env COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
-        --type slsaprovenance \
+    local cosign_types=("slsaprovenance" "slsaprovenance02")
+    if cosign verify-attestation --help 2>/dev/null | grep -q 'slsaprovenance1'; then
+      cosign_types=("slsaprovenance1" "slsaprovenance" "slsaprovenance02")
+    fi
+
+    local cosign_ok=0
+    for cosign_type in "${cosign_types[@]}"; do
+      if env COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
+        --type "$cosign_type" \
         --certificate-identity-regexp "https://github.com/${GITHUB_REPOSITORY}/.+" \
         --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-        "$ref"
+        "$ref" >"$cosign_file" 2>&1; then
+        echo "Captured cosign verify-attestation (${cosign_type}) output to ${cosign_file}"
+        cosign_ok=1
+        break
+      fi
+
+      if ! grep -qi 'no matching attestations' "$cosign_file"; then
+        break
+      fi
+    done
+
+    if [ "$cosign_ok" -ne 1 ]; then
+      echo "::error ::cosign verify-attestation failed (see ${cosign_file})" >&2
+      tail -n 50 "$cosign_file" >&2 || true
+      if grep -qi 'denied' "$cosign_file"; then
+        echo "::error ::Registry denied access. Ensure your ghcr.io credentials (.env GHCR_USERNAME/GHCR_TOKEN) have read:packages scope and access to ${REGISTRY} images." >&2
+      fi
+      return 1
+    fi
   fi
   echo "::endgroup::"
 }

@@ -6,6 +6,7 @@ mkdir -p public/evidence
 
 if [ -d "sbom-artifacts" ]; then
   find sbom-artifacts -name "*.spdx.json" -exec cp {} public/sbom/ \;
+  find sbom-artifacts -name "*.cdx.json" -exec cp {} public/sbom/ \;
 fi
 
 if [ -d "supply-chain-data" ]; then
@@ -214,6 +215,7 @@ IMAGE_LIST_HTML=""
 
 shopt -s nullglob
 sbom_files=(public/sbom/*.spdx.json)
+cyclonedx_files=(public/sbom/*.cdx.json)
 shopt -u nullglob
 
 cat > public/index.html <<'EOF'
@@ -630,6 +632,47 @@ EOF
 fi
 
 cat >> public/index.html <<'EOF'
+        <h3>🌀 CycloneDX SBOM (JSON)</h3>
+        <p>Raw CycloneDX SBOM files for the same container images.</p>
+EOF
+
+if [ ${#cyclonedx_files[@]} -gt 0 ]; then
+  cat >> public/index.html <<'EOF'
+        <ul class="artifact-list">
+EOF
+
+  for cdx in "${cyclonedx_files[@]}"; do
+    filename=$(basename "$cdx")
+    cdx_size=$(stat -c '%s' "$cdx")
+    if command -v numfmt >/dev/null 2>&1; then
+      cdx_size_hr=$(numfmt --to=iec --suffix=B "$cdx_size")
+    else
+      cdx_size_hr="${cdx_size} bytes"
+    fi
+    cdx_sha=$(sha256sum "$cdx" | awk '{print $1}')
+    filename_html=$(html_escape "$filename")
+    cat >> public/index.html <<EOF
+            <li>
+                <a href="sbom/${filename_html}" download><code>${filename_html}</code></a>
+                <span class="filesize">${cdx_size_hr}</span><br>
+                <span class="meta-label">SHA256</span> <code>${cdx_sha}</code>
+            </li>
+EOF
+  done
+
+  cat >> public/index.html <<'EOF'
+        </ul>
+EOF
+else
+  cat >> public/index.html <<'EOF'
+        <div class="info-box">
+            <strong>No CycloneDX SBOM artifacts found.</strong><br>
+            The upstream container build did not upload CycloneDX SBOM files for this run.
+        </div>
+EOF
+fi
+
+cat >> public/index.html <<'EOF'
         <h2>📦 Container Images</h2>
         <ul class="artifact-list">
 EOF
@@ -667,13 +710,15 @@ for image in jena jena-fuseki; do
   image_ref="${REGISTRY}/${image}:${version}"
   att_cmd=$(html_escape "docker buildx imagetools inspect ${image_ref} --format \"{{json .Attestations}}\"")
   syft_cmd=$(html_escape "syft packages ${image_ref} -o spdx-json")
-  cosign_cmd=$(html_escape "COSIGN_EXPERIMENTAL=1 cosign verify-attestation --type slsaprovenance --certificate-identity-regexp \"https://github.com/${GITHUB_REPOSITORY}/.+\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\" ${image_ref}")
+  syft_cdx_cmd=$(html_escape "syft packages ${image_ref} -o cyclonedx-json")
+  cosign_cmd=$(html_escape "COSIGN_EXPERIMENTAL=1 cosign verify-attestation --type slsaprovenance1 --certificate-identity-regexp \"https://github.com/${GITHUB_REPOSITORY}/.+\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\" ${image_ref}")
   cat >> public/index.html <<EOF
         <div class="evidence-card">
             <h3>${title} <span class="image-ref"><code>${image_ref}</code></span></h3>
 EOF
   render_command_block "View Image Attestations" "$att_cmd" "public/evidence/${image}-attestations.json" "Download attestation JSON"
-  render_command_block "Extract SBOM (Syft)" "$syft_cmd" "public/evidence/${image}-syft.spdx.json" "Download Syft output"
+  render_command_block "Extract SBOM (Syft, SPDX)" "$syft_cmd" "public/evidence/${image}-syft.spdx.json" "Download SPDX SBOM"
+  render_command_block "Extract SBOM (Syft, CycloneDX)" "$syft_cdx_cmd" "public/evidence/${image}-syft.cdx.json" "Download CycloneDX SBOM"
   render_command_block "Verify Build Provenance (Cosign)" "$cosign_cmd" "public/evidence/${image}-cosign.txt" "Download cosign log"
   cat >> public/index.html <<'EOF'
         </div>
@@ -684,7 +729,7 @@ cat >> public/index.html <<'EOF'
 
         <h2>🛡️ Security Features</h2>
         <ul>
-            <li>✅ SBOM in SPDX 2.3 format (linked above)</li>
+            <li>✅ SBOM in SPDX 2.3 and CycloneDX JSON formats (linked above)</li>
             <li>✅ SLSA Build Provenance (Level 3)</li>
             <li>✅ Cryptographically signed with Sigstore</li>
             <li>✅ Weekly vulnerability scanning with Trivy</li>

@@ -63,6 +63,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine image version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.image.name }}" in
+            jena)
+              VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+              ;;
+            jena-fuseki)
+              VERSION=$(grep -m1 'ENV[[:space:]]\+FUSEKI_VERSION' jena-fuseki/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+              ;;
+            *)
+              echo "Unknown image name: ${{ matrix.image.name }}" >&2
+              exit 1
+              ;;
+          esac
+          if [ -z "${VERSION:-}" ]; then
+            echo "Unable to determine version for ${{ matrix.image.name }}" >&2
+            exit 1
+          fi
+          MAJOR="${VERSION%%.*}"
+          REST="${VERSION#*.}"
+          MINOR="${REST%%.*}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+          echo "minor=$MINOR" >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
@@ -76,7 +104,9 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=5.6.0
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
+            type=raw,value=${{ steps.version.outputs.major }}
 
       - name: Build and push Docker image
         id: build
@@ -98,7 +128,20 @@ jobs:
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
           format: spdx-json
+          artifact-name: sbom-${{ matrix.image.name }}-spdx
           output-file: sbom-${{ matrix.image.name }}.spdx.json
+          upload-artifact: true
+          upload-release-assets: false
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM (CycloneDX) with Syft
+        uses: anchore/sbom-action@v0.18.0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          format: cyclonedx-json
+          artifact-name: sbom-${{ matrix.image.name }}-cyclonedx
+          output-file: sbom-${{ matrix.image.name }}.cdx.json
           upload-artifact: true
           upload-release-assets: false
           registry-username: ${{ github.actor }}

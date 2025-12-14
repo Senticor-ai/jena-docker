@@ -31,9 +31,14 @@ jobs:
       - name: Build Jena image
         run: docker build -t jena:test jena/
 
+      - name: Determine Jena version
+        run: |
+          JENA_VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+          echo "JENA_VERSION=$JENA_VERSION" >> "$GITHUB_ENV"
+
       - name: Test riot version
         run: |
-          docker run --rm jena:test riot --version | grep "5.6.0"
+          docker run --rm jena:test riot --version | grep "$JENA_VERSION"
 
       - name: Test RDF parsing (Turtle)
         run: |
