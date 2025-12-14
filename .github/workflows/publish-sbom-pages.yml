@@ -83,7 +83,7 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.5.0
         with:
-          cosign-release: 'v3.0.2'
+          cosign-release: 'v2.4.0'
 
       - name: Collect supply-chain evidence
         env:
