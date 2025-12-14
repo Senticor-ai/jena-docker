@@ -14,7 +14,7 @@
 #   limitations under the License.
 
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
 ENV LANG=C.UTF-8
