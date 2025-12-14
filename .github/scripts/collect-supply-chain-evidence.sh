@@ -183,9 +183,15 @@ process_image() {
       cosign_types=("slsaprovenance1" "slsaprovenance" "slsaprovenance02")
     fi
 
+    local cosign_flags=()
+    if cosign verify-attestation --help 2>/dev/null | grep -q -- '--experimental-oci11'; then
+      cosign_flags+=(--experimental-oci11)
+    fi
+
     local cosign_ok=0
     for cosign_type in "${cosign_types[@]}"; do
       if env COSIGN_EXPERIMENTAL=1 cosign verify-attestation \
+        "${cosign_flags[@]}" \
         --type "$cosign_type" \
         --certificate-identity-regexp "https://github.com/${GITHUB_REPOSITORY}/.+" \
         --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
