@@ -123,7 +123,7 @@ template = f"""<!DOCTYPE html>
   <div class="container">
     <a class="back" href="../index.html">← Back to transparency overview</a>
     <h1>{html.escape(title)}</h1>
-    <p><em>Snapshot from repository file "{html.escape(src)}", last updated {updated}</em></p>
+    <p><em>Snapshot from repository file "{html.escape(str(path))}", last updated {updated}</em></p>
     <pre>{escaped}</pre>
   </div>
 </body>
