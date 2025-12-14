@@ -101,7 +101,7 @@ jobs:
           curl -sSfL -o "$INSTALL_DIR/cosign" "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-${OS}-${ARCH}"
           chmod +x "$INSTALL_DIR/cosign"
           echo "$INSTALL_DIR" >> "$GITHUB_PATH"
-          cosign version
+          "$INSTALL_DIR/cosign" version
 
       - name: Collect supply-chain evidence
         env:
