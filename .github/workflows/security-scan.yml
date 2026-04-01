@@ -64,17 +64,25 @@ jobs:
             jena-fuseki/tdbloader2 \
             tests/*.sh
 
+      - name: Install Trivy CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.69.3
+
       - name: Scan repository for misconfiguration
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          skip-dirs: .git
-          scanners: misconfig
-          format: sarif
-          output: trivy-repository.sarif
-          severity: HIGH,CRITICAL
-          exit-code: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy fs \
+            --scanners misconfig \
+            --skip-dirs .git \
+            --severity HIGH,CRITICAL \
+            --format sarif \
+            --output trivy-repository.sarif \
+            --exit-code 1 \
+            .
 
       - name: Upload repository scan results
         uses: github/codeql-action/upload-sarif@v4
