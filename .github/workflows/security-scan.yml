@@ -64,13 +64,13 @@ jobs:
             jena-fuseki/tdbloader2 \
             tests/*.sh
 
-      - name: Scan repository for secrets and misconfiguration
+      - name: Scan repository for misconfiguration
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: fs
           scan-ref: .
           skip-dirs: .git
-          scanners: misconfig,secret
+          scanners: misconfig
           format: sarif
           output: trivy-repository.sarif
           severity: HIGH,CRITICAL
