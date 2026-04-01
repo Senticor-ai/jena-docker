@@ -22,7 +22,7 @@ if [ ! -f "$FUSEKI_BASE/shiro.ini" ] ; then
   echo "Initializing Apache Jena Fuseki"
   echo ""
   cp "$FUSEKI_HOME/shiro.ini" "$FUSEKI_BASE/shiro.ini"
-  if [ -z "$ADMIN_PASSWORD" ] ; then
+  if [ -z "${ADMIN_PASSWORD:-}" ] ; then
     ADMIN_PASSWORD=$(pwgen -s 15)
     echo "Randomly generated admin password:"
     echo ""
@@ -38,18 +38,17 @@ fi
 
 # $ADMIN_PASSWORD only modifies if ${ADMIN_PASSWORD}
 # is in shiro.ini
-if [ -n "$ADMIN_PASSWORD" ] ; then
+if [ -n "${ADMIN_PASSWORD:-}" ] ; then
   export ADMIN_PASSWORD
   envsubst '${ADMIN_PASSWORD}' < "$FUSEKI_BASE/shiro.ini" > "$FUSEKI_BASE/shiro.ini.$$" && \
     mv "$FUSEKI_BASE/shiro.ini.$$" "$FUSEKI_BASE/shiro.ini"
-  export ADMIN_PASSWORD
 fi
 
 # fork 
 exec "$@" &
 
 TDB_VERSION=''
-if [ ! -z ${TDB+x} ] && [ "${TDB}" = "2" ] ; then 
+if [ "${TDB:-}" = "2" ] ; then
   TDB_VERSION='tdb2'
 else
   TDB_VERSION='tdb'
@@ -57,17 +56,17 @@ fi
 
 # Wait until server is up
 echo "Waiting for Fuseki to finish starting up..."
-until $(curl --output /dev/null --silent --head --fail http://localhost:3030); do
+until curl --output /dev/null --silent --head --fail http://localhost:3030; do
   sleep 1s
 done
 
 # Convert env to datasets
-printenv | egrep "^FUSEKI_DATASET_" | while read env_var
+printenv | grep -E "^FUSEKI_DATASET_" | while IFS= read -r env_var
 do
-    dataset=$(echo $env_var | egrep -o "=.*$" | sed 's/^=//g')
+    dataset="${env_var#*=}"
     echo "Creating dataset $dataset"
     curl -s 'http://localhost:3030/$/datasets'\
-         -u admin:${ADMIN_PASSWORD}\
+         -u "admin:${ADMIN_PASSWORD}"\
          -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8'\
          --data "dbName=${dataset}&dbType=${TDB_VERSION}"
 done

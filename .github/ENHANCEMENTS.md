@@ -28,19 +28,28 @@ Automatically monitors and updates:
 **File**: `.github/workflows/security-scan.yml`
 
 Implements comprehensive vulnerability scanning:
-- **Trivy scanner** for CVE detection
+- **Trivy** repository scans for misconfigurations and secrets
+- **Trivy** image scans for HIGH/CRITICAL vulnerabilities
+- **Hadolint** for Dockerfile linting
+- **ShellCheck** for shell script linting
 - Scans on: push, PR, weekly schedule, manual trigger
 - Results uploaded to GitHub Security tab
 - SARIF format for GitHub Advanced Security
 - JSON artifacts for audit trails
-- Blocks on critical vulnerabilities (with warning)
+- Blocks on HIGH/CRITICAL findings in CI
 
 **Detects**:
 - OS package vulnerabilities
 - Application dependencies
 - Misconfigurations
 - Exposed secrets
-- License issues
+- Shell-safety regressions
+
+**Repository Settings Enabled**:
+- Dependabot vulnerability alerts
+- Dependabot security updates
+- Secret scanning
+- Secret scanning push protection
 
 ### 3. Comprehensive Integration Tests
 
@@ -89,10 +98,10 @@ Multiple SBOM formats and attestations:
 **Accessing SBOMs**:
 ```bash
 # View attestations
-docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:5.6.0
+docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:6.0.0
 
 # Download SBOM artifact from GitHub Actions runs
-# Or use: syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0
+# Or use: syft packages ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 ### 4a. GitHub Pages for SBOM Transparency
@@ -167,7 +176,7 @@ Formal security program:
 
 ## Base Image Security
 
-### Current Base: eclipse-temurin:21-jre-alpine
+### Current Base: eclipse-temurin:25-jre-alpine
 
 **Why Alpine**:
 - ✅ **Small size**: ~62 MB base (vs ~200 MB for Debian)
@@ -213,10 +222,10 @@ Every image includes:
 # Verify image provenance (requires cosign)
 cosign verify-attestation \
   --type slsaprovenance \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 
 # Check SBOM
-syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0
+syft packages ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 ## License Compliance

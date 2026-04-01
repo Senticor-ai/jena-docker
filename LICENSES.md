@@ -27,7 +27,7 @@ All Dockerfiles, shell scripts, and configuration files in this repository are l
 **License**: Apache License 2.0
 
 - **Apache Jena** (`/jena` in the image)
-  - Version: 5.6.0
+  - Version: 6.0.0
   - Copyright: The Apache Software Foundation
   - License: Apache License 2.0
   - Homepage: https://jena.apache.org/
@@ -35,7 +35,7 @@ All Dockerfiles, shell scripts, and configuration files in this repository are l
   - Includes dependencies with compatible licenses (Apache 2.0, MIT, BSD)
 
 - **Apache Jena Fuseki** (`/jena-fuseki` in the image)
-  - Version: 5.6.0
+  - Version: 6.0.0
   - Copyright: The Apache Software Foundation
   - License: Apache License 2.0
   - Homepage: https://jena.apache.org/documentation/fuseki2/
@@ -51,7 +51,7 @@ docker run --rm ghcr.io/senticor-ai/jena-fuseki:latest cat /jena-fuseki/NOTICE
 **License**: GPL-2.0 with Classpath Exception
 
 - **Eclipse Temurin JRE 21**
-  - Base Image: `eclipse-temurin:21-jre-alpine`
+  - Base Image: `eclipse-temurin:25-jre-alpine`
   - Location in image: `/opt/java/openjdk/`
   - Copyright: Eclipse Foundation, Oracle, and contributors
   - License: GNU General Public License v2.0 with Classpath Exception
@@ -109,9 +109,9 @@ All licenses in this image are compatible for distribution:
 Source code: https://jena.apache.org/download/
 
 ```bash
-# Download source for version 5.6.0
-wget https://downloads.apache.org/jena/source/apache-jena-5.6.0-source-release.zip
-wget https://downloads.apache.org/jena/source/apache-jena-fuseki-5.6.0-source-release.zip
+# Download source for version 6.0.0
+wget https://downloads.apache.org/jena/source/apache-jena-6.0.0-source-release.zip
+wget https://downloads.apache.org/jena/source/apache-jena-fuseki-6.0.0-source-release.zip
 ```
 
 ### Eclipse Temurin OpenJDK
@@ -155,11 +155,11 @@ Every published image includes:
 ```bash
 # Pull and inspect attestations
 docker buildx imagetools inspect \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0 --format "{{json .Attestations}}"
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0 --format "{{json .Attestations}}"
 
 # Using cosign (if available)
 cosign verify-attestation \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0 \
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0 \
   --type https://spdx.dev/Document
 
 # Download SBOM artifact from GitHub Actions
@@ -174,13 +174,13 @@ Generate SBOM locally:
 
 ```bash
 # Using Syft
-syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0 -o spdx-json > sbom.spdx.json
+syft packages ghcr.io/senticor-ai/jena-fuseki:6.0.0 -o spdx-json > sbom.spdx.json
 
 # Using Docker Scout
-docker scout sbom ghcr.io/senticor-ai/jena-fuseki:5.6.0
+docker scout sbom ghcr.io/senticor-ai/jena-fuseki:6.0.0
 
 # Using Trivy
-trivy image --format spdx-json ghcr.io/senticor-ai/jena-fuseki:5.6.0
+trivy image --format spdx-json ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 ## BSI TR-03183 Compliance
@@ -241,4 +241,4 @@ For license questions:
 ---
 
 Last Updated: 2025-11-16
-Image Version: 5.6.0
+Image Version: 6.0.0

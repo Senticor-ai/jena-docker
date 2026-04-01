@@ -14,7 +14,7 @@
 #   limitations under the License.
 
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
 ENV LANG=C.UTF-8
@@ -25,14 +25,14 @@ RUN set -eux; \
 
 
 # Update below according to https://jena.apache.org/download/
-# and checksum for apache-jena-fuseki-5.x.x.tar.gz.sha512
-ENV FUSEKI_SHA512=53dfe13cdd5f6387a0c62917e275fde2cd2e2f2052bfe7515384934f24915228b8512a2dd2b50b7060cc300c976254349d991fcea239484cae48e0a59d67cd54
-ENV FUSEKI_VERSION=5.6.0
+# and checksum for apache-jena-fuseki-6.x.x.tar.gz.sha512
+ENV FUSEKI_SHA512=8b14dcefade409bb4efd94e05291ea46d50508bf175f6f163f328d1d80183559a4c5b75806802283802a2879405a132b9b311e2277f784a784fa66ce4a9d8722
+ENV FUSEKI_VERSION=6.0.0
 ENV ASF_MIRROR=https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
 ENV ASF_ARCHIVE=https://archive.apache.org/dist/
 
-LABEL org.opencontainers.image.url="https://github.com/stain/jena-docker/tree/master/jena-fuseki"
-LABEL org.opencontainers.image.source="https://github.com/stain/jena-docker/"
+LABEL org.opencontainers.image.url="https://github.com/Senticor-ai/jena-docker/tree/main/jena-fuseki"
+LABEL org.opencontainers.image.source="https://github.com/Senticor-ai/jena-docker"
 LABEL org.opencontainers.image.documentation="https://jena.apache.org/documentation/fuseki2/"
 LABEL org.opencontainers.image.title="Apache Jena Fuseki"
 LABEL org.opencontainers.image.description="Fuseki is a SPARQL 1.1 server with a web interface, backed by the Apache Jena TDB RDF triple store."

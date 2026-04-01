@@ -21,8 +21,6 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd -- "${SCRIPT_DIR}/../.." && pwd)
 cd "$REPO_ROOT"
 
-REGISTRY=${REGISTRY:-ghcr.io/senticor-ai}
-
 if [ -z "${CONTAINER_CLI:-}" ]; then
   if command -v docker >/dev/null 2>&1; then
     CONTAINER_CLI=docker
@@ -56,6 +54,11 @@ if [ -z "${GITHUB_REPOSITORY:-}" ]; then
   else
     GITHUB_REPOSITORY="Senticor-ai/jena-docker"
   fi
+fi
+
+if [ -z "${REGISTRY:-}" ]; then
+  registry_owner=$(printf '%s' "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+  REGISTRY="ghcr.io/${registry_owner}"
 fi
 
 if [ -z "${JENA_VERSION:-}" ]; then

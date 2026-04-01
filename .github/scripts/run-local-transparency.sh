@@ -28,8 +28,8 @@ log() {
 ENV_FILE="$REPO_ROOT/.env"
 if [ -f "$ENV_FILE" ]; then
   log "Loading environment from $ENV_FILE"
-  # shellcheck disable=SC1090
   set -a
+  # shellcheck disable=SC1090
   source "$ENV_FILE"
   set +a
 else

@@ -36,8 +36,9 @@ render_command_block() {
   } >> "$HTML_DEST"
 
   if [ -f "$file" ]; then
-    local rel="evidence/$(basename "$file")"
+    local rel
     local size_bytes
+    rel="evidence/$(basename "$file")"
     size_bytes=$(stat -c '%s' "$file")
     local size_human="${size_bytes} bytes"
     if command -v numfmt >/dev/null 2>&1; then
@@ -147,7 +148,12 @@ if [ "$DOC_SOURCES_FOUND" -eq 0 ]; then
 '
 fi
 
-REGISTRY="ghcr.io/senticor-ai"
+if [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  registry_owner=$(printf '%s' "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+  REGISTRY="ghcr.io/${registry_owner}"
+else
+  REGISTRY="ghcr.io/senticor-ai"
+fi
 JENA_VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
 FUSEKI_VERSION=$(grep -m1 'ENV[[:space:]]\+FUSEKI_VERSION' jena-fuseki/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
 declare -A IMAGE_TITLES=([jena]="Jena CLI Tools" [jena-fuseki]="Fuseki Server")

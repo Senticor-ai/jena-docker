@@ -1,14 +1,11 @@
 # Jena Fuseki docker image
 
-* Docker image: [stain/jena-fuseki](https://hub.docker.com/r/stain/jena-fuseki/)
-* Base images: [eclipse-temurin](https://hub.docker.com/r/_/eclipse-temurin/):21-jre-alpine
-* Source: [Dockerfile](https://github.com/stain/jena-docker/blob/master/jena-fuseki/Dockerfile), [Apache Jena Fuseki](https://jena.apache.org/download/)
+* Container image: `ghcr.io/senticor-ai/jena-fuseki`
+* Base images: [eclipse-temurin](https://hub.docker.com/r/_/eclipse-temurin/):25-jre-alpine
+* Source: [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/main/jena-fuseki/Dockerfile), [Apache Jena Fuseki](https://jena.apache.org/download/)
+* Published tags: `6.0.0`, `6.0`, `6`, `latest`
 
-[![Build](https://github.com/stain/jena-docker/actions/workflows/main.yml/badge.svg)](https://github.com/stain/jena-docker/actions/workflows/main.yml)
-
-[![](https://images.microbadger.com/badges/image/stain/jena-fuseki.svg)](https://microbadger.com/images/stain/jena-fuseki "stain/jena-fuseki")
-
-[![](https://images.microbadger.com/badges/version/stain/jena-fuseki:4.8.0.svg)](https://github.com/stain/jena-docker/ "Jena Fuseki 4.8.0")
+[![Build](https://github.com/Senticor-ai/jena-docker/actions/workflows/main.yml/badge.svg)](https://github.com/Senticor-ai/jena-docker/actions/workflows/main.yml)
 
 
 This is a [Docker](https://www.docker.com/) image for running
@@ -25,9 +22,9 @@ Jena or Fuseki.
 
 Different licenses apply to files added by different Docker layers:
 
-* stain/jena-fuseki [Dockerfile](https://github.com/stain/jena-docker/blob/master/jena-fuseki/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+* `ghcr.io/senticor-ai/jena-fuseki` [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/main/jena-fuseki/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 * Apache Jena (`/jena-fuseki` in the image): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-  See also: `docker run stain/jena-fuseki cat /jena-fuseki/NOTICE`
+  See also: `docker run ghcr.io/senticor-ai/jena-fuseki cat /jena-fuseki/NOTICE`
 * OpenJDK (`/opt/java/openjdk/` in the image): [GPL 2.0 with Classpath exception](https://openjdk.java.net/legal/gplv2+ce.html)
   See `/opt/java/openjdk/legal/` in image
 * Alpine GNU/Linux (rest of `/`): [GPL 2](http://www.gnu.org/licenses/gpl-2.0) and [Alpine License Information](https://gitlab.alpinelinux.org/alpine/aports/-/issues/7423)
@@ -37,13 +34,13 @@ Different licenses apply to files added by different Docker layers:
 
 To try out this image, try:
 
-    docker run -p 3030:3030 stain/jena-fuseki
+    docker run -p 3030:3030 ghcr.io/senticor-ai/jena-fuseki
 
 The Apache Jena Fuseki should then be available at http://localhost:3030/
 
 To expose Fuseki on a different port, simply modify first part of `-p`:
 
-    docker run -p 8080:3030 stain/jena-fuseki
+    docker run -p 8080:3030 ghcr.io/senticor-ai/jena-fuseki
 
 
 To load RDF graphs, you will need to log in as the `admin` user. To see the
@@ -56,12 +53,12 @@ volume `/fuseki` is an empty directory.
 You can override the admin-password using the form
 `-e ADMIN_PASSWORD=pw123`:
 
-    docker run -p 3030:3030 -e ADMIN_PASSWORD=pw123 stain/jena-fuseki
+    docker run -p 3030:3030 -e ADMIN_PASSWORD=pw123 ghcr.io/senticor-ai/jena-fuseki
 
 To specify Java settings such as the amount of memory to allocate for the
 heap (default: 1200 MiB), set the `JVM_ARGS` environment with `-e`:
 
-    docker run -p 3030:3030 -e JVM_ARGS=-Xmx2g stain/jena-fuseki
+    docker run -p 3030:3030 -e JVM_ARGS=-Xmx2g ghcr.io/senticor-ai/jena-fuseki
 
 
 ## Data persistence
@@ -79,19 +76,19 @@ Then start fuseki using `--volumes-from`. This allows you to later upgrade the
 jena-fuseki docker image without losing the data. The command below also uses
 `-d` to start the container in the background.
 
-    docker run -d --name fuseki -p 3030:3030 --volume fuseki-data:/fuseki stain/jena-fuseki
+    docker run -d --name fuseki -p 3030:3030 --volume fuseki-data:/fuseki ghcr.io/senticor-ai/jena-fuseki
 
 If you want to store fuseki data in a specified location on the host (e.g. for
 disk space or speed requirements), specify it using `--volume`:
 
-    docker run -d --name fuseki -p 3030:3030 --volume /ssd/data/fuseki:/fuseki stain/jena-fuseki
+    docker run -d --name fuseki -p 3030:3030 --volume /ssd/data/fuseki:/fuseki ghcr.io/senticor-ai/jena-fuseki
 
 Note that the `/fuseki` volume must only be accessed from a single Fuseki
 container at a time, to avoid [lock errors](https://jena.apache.org/documentation/tdb/faqs.html#lock-exception). 
 
 Within the container Fuseki runs as the `fuseki` user which typically have UID 1000, this can cause a problem if you are mounting the folder from outside. You can fix permission on your `/fuseki` folder:
 
-    docker run --user 0 --volume /ssd/data/fuseki:/fuseki stain/jena-fuseki chown -R 1000 /fuseki
+    docker run --user 0 --volume /ssd/data/fuseki:/fuseki ghcr.io/senticor-ai/jena-fuseki chown -R 1000 /fuseki
 
 To check the logs for the container you gave `--name fuseki`, use:
 
@@ -111,7 +108,7 @@ To restart a named container (it will remember the volume and port config)
 
 To use [TDB v2](https://jena.apache.org/documentation/tdb2/) you can pass the environment variable with `-e TDB=2`
 
-     docker run -p 3030:3030 -e TDB=2 stain/jena-fuseki
+     docker run -p 3030:3030 -e TDB=2 ghcr.io/senticor-ai/jena-fuseki
 
 If you do so, then you need to use the appropriate `tdbloader2` for your data, see below for more details.
 
@@ -121,16 +118,16 @@ If you do so, then you need to use the appropriate `tdbloader2` for your data, s
 If you want to upgrade the Fuseki container named `fuseki` which use the data
 volume `fuseki-data` as recommended above, do:
 
-    docker pull stain/jena-fuseki
+    docker pull ghcr.io/senticor-ai/jena-fuseki
     docker stop fuseki
     docker rm fuseki
-    docker run -d --name fuseki -p 3030:3030 --volumes-from fuseki-data stain/jena-fuseki
+    docker run -d --name fuseki -p 3030:3030 --volumes-from fuseki-data ghcr.io/senticor-ai/jena-fuseki
 
 ## Create empty datasets
 
 You can create empty datasets at startup with:
 
-    docker run -d --name fuseki -p 3030:3030 -e FUSEKI_DATASET_1=mydataset -e FUSEKI_DATASET_2=otherdataset stain/jena-fuseki
+    docker run -d --name fuseki -p 3030:3030 -e FUSEKI_DATASET_1=mydataset -e FUSEKI_DATASET_2=otherdataset ghcr.io/senticor-ai/jena-fuseki
 
 This will create 2 empty datasets: mydataset and otherdataset.
 
@@ -147,7 +144,7 @@ command line tool and load datasets from the docker volume `/staging`.
 
 For help, try:
 
-    docker run stain/jena-fuseki ./load.sh
+    docker run ghcr.io/senticor-ai/jena-fuseki ./load.sh
 
 You will most likely want to load from a folder on the host computer by using
 `-v`, and into a data volume that you can then use with the regular fuseki.
@@ -164,7 +161,7 @@ from the Docker data volume `fuseki-data` (see above) by loading the two files
 computer:
 
     docker run --volumes-from fuseki-data -v /home/stain/ops/chembl19:/staging \
-       stain/jena-fuseki ./load.sh chembl19 cco.ttl.gz void.ttl.gz
+       ghcr.io/senticor-ai/jena-fuseki ./load.sh chembl19 cco.ttl.gz void.ttl.gz
 
 **Tip:** You might find it beneficial to run data loading from the data staging
 directory in order to use tab-completion etc. without exposing the path on the
@@ -225,7 +222,7 @@ Note that Fuseki TDB datasets are sub-folders in `/fuseki/databases/`.
 You will need to provide the assembler file on a mounted Docker volume together with the
 data:
 
-    docker run --volumes-from fuseki-data -v /home/stain/data:/staging stain/jena-fuseki \
+    docker run --volumes-from fuseki-data -v /home/stain/data:/staging ghcr.io/senticor-ai/jena-fuseki \
       ./tdbloader --desc=/staging/tdb.ttl
 
 Remember to use the Docker container's data volume paths within the assembler
@@ -259,7 +256,6 @@ For any issues with Jena or Fuseki, feel free to
 [raise a bug](https://jena.apache.org/help_and_support/bugs_and_suggestions.html).
 
 For any issues with the packaging in this Docker image, or 
-its [Dockerfile](https://github.com/stain/jena-docker/),
-please raise a [pull request](https://github.com/stain/jena-docker/pulls) or
-[issue](https://github.com/stain/jena-docker/issues).
-
+its [Dockerfile](https://github.com/Senticor-ai/jena-docker/),
+please raise a [pull request](https://github.com/Senticor-ai/jena-docker/pulls) or
+[issue](https://github.com/Senticor-ai/jena-docker/issues).

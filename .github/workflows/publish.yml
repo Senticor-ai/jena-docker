@@ -19,19 +19,79 @@ on:
   push:
     branches:
       - main
-      - master
     tags:
-      - 'v*'
+      - "v*"
   release:
     types: [published]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_OWNER: senticor-ai  # Lowercase for container registry compatibility
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: jena
+            context: ./jena
+            dockerfile: ./jena/Dockerfile
+          - name: jena-fuseki
+            context: ./jena-fuseki
+            dockerfile: ./jena-fuseki/Dockerfile
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Build smoke-test image
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          load: true
+          tags: ${{ matrix.image.name }}:smoke
+
+      - name: Run Jena smoke test
+        if: ${{ matrix.image.name == 'jena' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d '[:space:]')
+          docker run --rm jena:smoke riot --version | grep -F "$version"
+
+      - name: Run Fuseki smoke test
+        if: ${{ matrix.image.name == 'jena-fuseki' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_name="fuseki-smoke"
+          trap 'docker rm -f "$container_name" >/dev/null 2>&1 || true' EXIT
+
+          docker run -d \
+            --name "$container_name" \
+            -p 127.0.0.1:3030:3030 \
+            -e ADMIN_PASSWORD=smoke-test-password \
+            jena-fuseki:smoke
+
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3030/\$/ping >/dev/null; then
+              curl -fsS http://127.0.0.1:3030/ | grep -qi fuseki
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs "$container_name"
+          exit 1
+
   build-and-push:
+    needs: smoke-test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,13 +111,21 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Normalize image owner
+        id: owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "value=$owner" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -70,34 +138,37 @@ jobs:
           set -euo pipefail
           case "${{ matrix.image.name }}" in
             jena)
-              VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+              version=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d '[:space:]')
               ;;
             jena-fuseki)
-              VERSION=$(grep -m1 'ENV[[:space:]]\+FUSEKI_VERSION' jena-fuseki/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
+              version=$(grep -m1 'ENV[[:space:]]\+FUSEKI_VERSION' jena-fuseki/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d '[:space:]')
               ;;
             *)
               echo "Unknown image name: ${{ matrix.image.name }}" >&2
               exit 1
               ;;
           esac
-          if [ -z "${VERSION:-}" ]; then
+
+          if [ -z "${version:-}" ]; then
             echo "Unable to determine version for ${{ matrix.image.name }}" >&2
             exit 1
           fi
-          MAJOR="${VERSION%%.*}"
-          REST="${VERSION#*.}"
-          MINOR="${REST%%.*}"
+
+          major="${version%%.*}"
+          rest="${version#*.}"
+          minor="${rest%%.*}"
+
           {
-            echo "version=$VERSION"
-            echo "major=$MAJOR"
-            echo "minor=$MINOR"
+            echo "value=$version"
+            echo "major=$major"
+            echo "minor=$minor"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Extract metadata (tags, labels)
+      - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}
+          images: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -106,13 +177,13 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=${{ steps.version.outputs.value }}
             type=raw,value=${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}
             type=raw,value=${{ steps.version.outputs.major }}
 
       - name: Build and push Docker image
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.dockerfile }}
@@ -123,12 +194,12 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
           sbom: true
-          provenance: true
+          provenance: mode=max
 
-      - name: Generate SBOM with Syft
-        uses: anchore/sbom-action@v0.18.0
+      - name: Generate SPDX SBOM with Syft
+        uses: anchore/sbom-action@v0.24.0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          image: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           artifact-name: sbom-${{ matrix.image.name }}-spdx
           output-file: sbom-${{ matrix.image.name }}.spdx.json
@@ -137,10 +208,10 @@ jobs:
           registry-username: ${{ github.actor }}
           registry-password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate SBOM (CycloneDX) with Syft
-        uses: anchore/sbom-action@v0.18.0
+      - name: Generate CycloneDX SBOM with Syft
+        uses: anchore/sbom-action@v0.24.0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          image: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
           format: cyclonedx-json
           artifact-name: sbom-${{ matrix.image.name }}-cyclonedx
           output-file: sbom-${{ matrix.image.name }}.cdx.json
@@ -150,16 +221,16 @@ jobs:
           registry-password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ matrix.image.name }}
+          subject-name: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
           sbom-path: sbom-${{ matrix.image.name }}.spdx.json
           push-to-registry: true

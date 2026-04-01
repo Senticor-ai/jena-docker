@@ -14,10 +14,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-extensions="rdf ttl owl nt nquads"
-PATTERNS=""
-for e in $extensions ; do
-  PATTERNS="$PATTERNS *.$e *.$e.gz"
+set -euo pipefail
+shopt -s nullglob
+
+extensions=(rdf ttl owl nt nquads)
+default_patterns=()
+for e in "${extensions[@]}" ; do
+  default_patterns+=("*.${e}" "*.${e}.gz")
 done
 
 if [ $# -eq 0 ] ; then
@@ -29,7 +32,7 @@ if [ $# -eq 0 ] ; then
   echo 'PATTERNs can be a filename or a shell glob pattern like *ttl'
   echo ""
   echo "If no PATTERN are given, the default patterns are searched:"
-  echo "$PATTERNS"
+  printf '  %s\n' "${default_patterns[@]}"
   echo ""
   echo "Set the environment variable TDBLOADER_OPTS for any additional"
   echo "options to pass to tdbloader, e.g. --graph=https://example.org/graph#name"
@@ -37,39 +40,56 @@ if [ $# -eq 0 ] ; then
 fi
 
 cd /staging 2>/dev/null || echo "/staging not found" >&2
-echo "Current directory:" $(pwd)
+echo "Current directory: $(pwd)"
 
 DB=$1
 shift
 
+patterns=()
 if [ $# -eq 0 ] ; then
-  patterns="$PATTERNS"
+  patterns=("${default_patterns[@]}")
+  user_supplied_patterns=0
 else
-  patterns="$@"
+  patterns=("$@")
+  user_supplied_patterns=1
 fi
 
-files=""
-for f in $patterns; do
-  if [ -f $f ] ; then
-    files="$files $f"
-  else
-    if [ $# -gt 0 ] ; then
-      # User-specified file/pattern missing
-      echo "WARNING: Not found: $f" >&2
+files=()
+for pattern in "${patterns[@]}"; do
+  mapfile -t matches < <(compgen -G "$pattern" || true)
+  if [ ${#matches[@]} -eq 0 ]; then
+    if [ "$user_supplied_patterns" -eq 1 ] ; then
+      echo "WARNING: Not found: $pattern" >&2
     fi
+    continue
   fi
+
+  for f in "${matches[@]}"; do
+    if [ -f "$f" ] ; then
+      files+=("$f")
+    fi
+  done
 done
 
-if [ "$files" == "" ] ; then
+if [ ${#files[@]} -eq 0 ] ; then
   echo "No files found for: " >&2
-  echo "$patterns" >&2
+  printf '%s\n' "${patterns[@]}" >&2
   exit 1
 fi
 
 echo "#########"
 echo "Loading to Fuseki TDB database $DB:"
 echo ""
-echo $files
+printf '%s\n' "${files[@]}"
 echo "#########"
 
-exec $FUSEKI_HOME/tdbloader $TDBLOADER_OPTS --loc=$FUSEKI_BASE/databases/$DB $files
+tdbloader_opts=()
+if [ -n "${TDBLOADER_OPTS:-}" ]; then
+  # Split the optional extra arguments using the shell's default word-splitting rules.
+  read -r -a tdbloader_opts <<< "${TDBLOADER_OPTS}"
+fi
+
+exec "$FUSEKI_HOME/tdbloader" \
+  "${tdbloader_opts[@]}" \
+  "--loc=$FUSEKI_BASE/databases/$DB" \
+  "${files[@]}"

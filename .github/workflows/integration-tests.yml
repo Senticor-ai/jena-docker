@@ -17,163 +17,44 @@ name: Integration Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   test-jena:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Jena image
         run: docker build -t jena:test jena/
 
-      - name: Determine Jena version
-        run: |
-          JENA_VERSION=$(grep -m1 'ENV[[:space:]]\+JENA_VERSION' jena/Dockerfile | cut -d= -f2 | tr -d '"' | tr -d "[:space:]")
-          echo "JENA_VERSION=$JENA_VERSION" >> "$GITHUB_ENV"
-
-      - name: Test riot version
-        run: |
-          docker run --rm jena:test riot --version | grep "$JENA_VERSION"
-
-      - name: Test RDF parsing (Turtle)
-        run: |
-          echo "@prefix ex: <http://example.org/> . ex:subject ex:predicate ex:object ." > /tmp/test.ttl
-          docker run --rm -v /tmp:/rdf jena:test riot test.ttl | grep "example.org"
-
-      - name: Test RDF validation
-        run: |
-          echo "INVALID RDF" > /tmp/invalid.ttl
-          docker run --rm -v /tmp:/rdf jena:test riot --validate invalid.ttl && exit 1 || echo "Correctly failed on invalid RDF"
-
-      - name: Test arq SPARQL query
-        run: |
-          echo "@prefix : <http://example.org/> . :a :b :c ." > /tmp/data.ttl
-          echo "SELECT * WHERE { ?s ?p ?o }" > /tmp/query.rq
-          docker run --rm -v /tmp:/rdf jena:test arq --data=/rdf/data.ttl --query=/rdf/query.rq | grep "example.org"
+      - name: Run Jena smoke harness
+        env:
+          CONTAINER_RUNTIME: docker
+        run: tests/jena-upstream-smoke.sh jena:test
 
   test-fuseki:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Fuseki image
         run: docker build -t jena-fuseki:test jena-fuseki/
 
-      - name: Start Fuseki with custom admin password
-        run: |
-          docker run -d --name fuseki-test \
-            -p 3030:3030 \
-            -e ADMIN_PASSWORD=testpass123 \
-            jena-fuseki:test
-
-      - name: Wait for Fuseki to be ready
-        run: |
-          echo "Waiting for Fuseki initialization to complete..."
-          FOUND=false
-          for i in {1..60}; do
-            if docker logs fuseki-test 2>&1 | grep -q "Fuseki is available"; then
-              echo "✓ Found 'Fuseki is available' message at attempt $i"
-              FOUND=true
-              sleep 3  # Grace period for final setup
-              break
-            fi
-            sleep 2
-          done
-
-          echo "=== Full Fuseki logs ==="
-          docker logs fuseki-test 2>&1
-          echo "=== End logs ==="
-
-          if [ "$FOUND" = "false" ]; then
-            echo "ERROR: Never saw 'Fuseki is available' message after 120 seconds"
-            exit 1
-          fi
-
-      - name: Test Fuseki ping endpoint
-        run: |
-          echo "Testing ping endpoint..."
-          curl -v http://localhost:3030/$/ping
-
-      - name: Test Fuseki UI is accessible
-        run: |
-          echo "Testing UI..."
-          curl -v http://localhost:3030/ | grep -i fuseki
-
-      - name: Debug - Check shiro.ini
-        run: |
-          echo "=== Checking shiro.ini in container ==="
-          docker exec fuseki-test cat /fuseki/shiro.ini || echo "Could not read shiro.ini"
-
-      - name: Test admin authentication
-        run: |
-          echo "Testing admin auth with testpass123..."
-          curl -v -u admin:testpass123 http://localhost:3030/$/server
-
-      - name: Create test dataset via API
-        run: |
-          curl -sf -X POST -u admin:testpass123 \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            --data "dbName=testdb&dbType=tdb2" \
-            http://localhost:3030/$/datasets
-
-      - name: Verify dataset was created
-        run: |
-          curl -sf -u admin:testpass123 http://localhost:3030/$/datasets | grep testdb
-
-      - name: Upload test data
-        run: |
-          echo "@prefix : <http://test.org/> . :subject :predicate :object ." > /tmp/test.ttl
-          curl -sf -X POST -u admin:testpass123 \
-            -H "Content-Type: text/turtle" \
-            --data-binary @/tmp/test.ttl \
-            http://localhost:3030/testdb/data
-
-      - name: Query uploaded data
-        run: |
-          curl -sf -X POST -u admin:testpass123 \
-            -H "Content-Type: application/sparql-query" \
-            --data "SELECT * WHERE { ?s ?p ?o }" \
-            http://localhost:3030/testdb/query | grep "test.org"
-
-      - name: Test stats endpoint
-        run: |
-          curl -sf -u admin:testpass123 http://localhost:3030/$/stats
-
-      - name: Check logs for errors
-        run: |
-          docker logs fuseki-test 2>&1 | grep -i "error" && exit 1 || echo "No errors in logs"
-
-      - name: Verify admin password was set correctly
-        run: |
-          # Password should NOT appear in logs
-          if docker logs fuseki-test 2>&1 | grep -q "admin=testpass123"; then
-            echo "ERROR: Password exposed in logs!"
-            exit 1
-          fi
-          # Should NOT see "Randomly generated" when password is explicitly set
-          if docker logs fuseki-test 2>&1 | grep -q "Randomly generated"; then
-            echo "ERROR: Random password generated despite ADMIN_PASSWORD being set!"
-            exit 1
-          fi
-          echo "Password handling verified correctly"
-
-      - name: Stop and cleanup
-        if: always()
-        run: |
-          docker stop fuseki-test || true
-          docker rm fuseki-test || true
+      - name: Run Fuseki smoke harness
+        env:
+          CONTAINER_RUNTIME: docker
+        run: tests/fuseki-upstream-smoke.sh jena-fuseki:test
 
   test-fuseki-tdb2:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Fuseki image
         run: docker build -t jena-fuseki:test jena-fuseki/
@@ -224,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Fuseki image
         run: docker build -t jena-fuseki:test jena-fuseki/
