@@ -2,7 +2,7 @@
 
 * Container image: `ghcr.io/senticor-ai/jena`
 * Base images: [eclipse-temurin](https://hub.docker.com/r/_/eclipse-temurin/):25-jre-alpine
-* Source: [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/master/jena/Dockerfile), [Apache Jena](https://jena.apache.org/download/)
+* Source: [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/main/jena/Dockerfile), [Apache Jena](https://jena.apache.org/download/)
 * Published tags: `6.0.0`, `6.0`, `6`, `latest`
 
 
@@ -17,7 +17,7 @@ command line tools, like `rdfcompare`, `tdbloader` and `sparql`.
 
 Different licenses apply to files added by different Docker layers:
 
-* `ghcr.io/senticor-ai/jena` [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/master/jena/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+* `ghcr.io/senticor-ai/jena` [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/main/jena/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 * Apache Jena (`/jena` in the image): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
   See also: `docker run ghcr.io/senticor-ai/jena cat /jena/NOTICE`
 * OpenJDK (`/opt/java/openjdk/` in the image): [GPL 2.0 with Classpath exception](https://openjdk.java.net/legal/gplv2+ce.html)

@@ -33,7 +33,7 @@ ENV JENA_VERSION=6.0.0
 ENV ASF_MIRROR=https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
 ENV ASF_ARCHIVE=https://archive.apache.org/dist/
 
-LABEL org.opencontainers.image.url="https://github.com/Senticor-ai/jena-docker/tree/master/jena"
+LABEL org.opencontainers.image.url="https://github.com/Senticor-ai/jena-docker/tree/main/jena"
 LABEL org.opencontainers.image.source="https://github.com/Senticor-ai/jena-docker"
 LABEL org.opencontainers.image.documentation="https://jena.apache.org/documentation/tools/"
 LABEL org.opencontainers.image.title="Apache Jena"

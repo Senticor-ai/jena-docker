@@ -79,7 +79,7 @@ from Apache Software Foundation.
 
 ## Publishing
 
-Images are automatically built and published to GitHub Container Registry when changes land on `main` or `master`. See [.github/PUBLISHING.md](.github/PUBLISHING.md) for details.
+Images are automatically built and published to GitHub Container Registry when changes land on `main`. See [.github/PUBLISHING.md](.github/PUBLISHING.md) for details.
 
 For local builds and publishing to other registries, see:
 - [DOCKER_HUB_GUIDE.md](DOCKER_HUB_GUIDE.md) - Publishing to Docker Hub
@@ -118,7 +118,7 @@ To minimize layer size, there's a single `RUN` with `curl`, `sha512sum`, `tar zx
 Some files from the Apache Jena distributions are stripped, e.g. javadocs and the `fuseki.war` file.
 
 The Fuseki image includes some [helper scripts](jena-fuseki/load.sh) to do [tdb loading](https://jena.apache.org/documentation/tdb/commands.html) using `fuseki-server.jar`.
-In addition, Fuseki has a [`docker-entrypoint.sh`](https://github.com/Senticor-ai/jena-docker/blob/master/jena-fuseki/docker-entrypoint.sh) that populates `shiro.ini` with the password provided as `-e ADMIN_PASSWORD` to Docker, or with a new randomly generated password that is printed the first time.
+In addition, Fuseki has a [`docker-entrypoint.sh`](https://github.com/Senticor-ai/jena-docker/blob/main/jena-fuseki/docker-entrypoint.sh) that populates `shiro.ini` with the password provided as `-e ADMIN_PASSWORD` to Docker, or with a new randomly generated password that is printed the first time.
 
 **Note**: Fuseki 6.x requires explicit SessionManager configuration in `shiro.ini` due to the migration from `javax.servlet` to `jakarta.servlet`. This is included in the image.
 

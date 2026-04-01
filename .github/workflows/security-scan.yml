@@ -17,9 +17,9 @@ name: Security and Compliance
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
   schedule:
     - cron: "0 9 * * 1"
   workflow_dispatch:

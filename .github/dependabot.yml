@@ -2,7 +2,7 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: "master"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -23,7 +23,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/jena"
-    target-branch: "master"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -40,7 +40,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/jena-fuseki"
-    target-branch: "master"
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"

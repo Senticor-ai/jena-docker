@@ -2,7 +2,7 @@
 
 * Container image: `ghcr.io/senticor-ai/jena-fuseki`
 * Base images: [eclipse-temurin](https://hub.docker.com/r/_/eclipse-temurin/):25-jre-alpine
-* Source: [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/master/jena-fuseki/Dockerfile), [Apache Jena Fuseki](https://jena.apache.org/download/)
+* Source: [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/main/jena-fuseki/Dockerfile), [Apache Jena Fuseki](https://jena.apache.org/download/)
 * Published tags: `6.0.0`, `6.0`, `6`, `latest`
 
 [![Build](https://github.com/Senticor-ai/jena-docker/actions/workflows/main.yml/badge.svg)](https://github.com/Senticor-ai/jena-docker/actions/workflows/main.yml)
@@ -22,7 +22,7 @@ Jena or Fuseki.
 
 Different licenses apply to files added by different Docker layers:
 
-* `ghcr.io/senticor-ai/jena-fuseki` [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/master/jena-fuseki/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+* `ghcr.io/senticor-ai/jena-fuseki` [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/main/jena-fuseki/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 * Apache Jena (`/jena-fuseki` in the image): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
   See also: `docker run ghcr.io/senticor-ai/jena-fuseki cat /jena-fuseki/NOTICE`
 * OpenJDK (`/opt/java/openjdk/` in the image): [GPL 2.0 with Classpath exception](https://openjdk.java.net/legal/gplv2+ce.html)
