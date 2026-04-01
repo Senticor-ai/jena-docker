@@ -121,16 +121,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Install Trivy CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.69.3
+
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: ${{ matrix.image.name }}:scan
-          scanners: vuln
-          format: sarif
-          output: trivy-${{ matrix.image.name }}.sarif
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --format sarif \
+            --output trivy-${{ matrix.image.name }}.sarif \
+            --exit-code 1 \
+            ${{ matrix.image.name }}:scan
 
       - name: Upload image scan results
         uses: github/codeql-action/upload-sarif@v4
@@ -140,15 +149,17 @@ jobs:
           category: trivy-${{ matrix.image.name }}
 
       - name: Export JSON vulnerability report
-        uses: aquasecurity/trivy-action@v0.35.0
+        shell: bash
         if: always()
-        with:
-          image-ref: ${{ matrix.image.name }}:scan
-          scanners: vuln
-          format: json
-          output: trivy-${{ matrix.image.name }}.json
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
+        run: |
+          set -euo pipefail
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --format json \
+            --output trivy-${{ matrix.image.name }}.json \
+            ${{ matrix.image.name }}:scan
 
       - name: Upload JSON vulnerability report
         uses: actions/upload-artifact@v7
