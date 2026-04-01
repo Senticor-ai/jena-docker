@@ -4,11 +4,17 @@
 
 We provide security updates for the following versions:
 
-| Version | Supported          | Base Image             |
-| ------- | ------------------ | ---------------------- |
-| 6.0.0   | ✅ Yes (Current)   | eclipse-temurin:25-jre-alpine |
-| 5.6.0   | ⚠️ Limited         | eclipse-temurin:21-jre-alpine |
-| < 5.6.0 | ❌ No              | -                      |
+| Version / Tag Line | Supported        | Notes |
+| ------------------ | ---------------- | ----- |
+| Current published line (`6.0.0`, `6.0`, `6`, `latest`) | ✅ Yes | Built from the default branch and currently based on `eclipse-temurin:25-jre-alpine` |
+| Historical `5.x` tags | ❌ No | Not built or patched by current CI/CD |
+| Older tags | ❌ No | No active maintenance |
+
+This repository currently publishes only the version declared in the Dockerfiles on the default branch.
+At the moment that is Apache Jena/Fuseki `6.0.0`.
+We do not maintain a separate `5.x` branch or publish a parallel `5.x` image line from CI.
+
+If older `5.x` images still exist in GHCR from past publishes, treat them as historical artifacts rather than supported releases.
 
 ## Security Features
 
