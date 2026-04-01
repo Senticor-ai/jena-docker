@@ -31,22 +31,22 @@ Enter your Docker Hub username and password when prompted.
 export DOCKER_USERNAME=yourusername
 
 # Build Jena
-docker build -t $DOCKER_USERNAME/jena:5.6.0 jena/
-docker tag $DOCKER_USERNAME/jena:5.6.0 $DOCKER_USERNAME/jena:latest
+docker build -t $DOCKER_USERNAME/jena:6.0.0 jena/
+docker tag $DOCKER_USERNAME/jena:6.0.0 $DOCKER_USERNAME/jena:latest
 
 # Build Jena Fuseki
-docker build -t $DOCKER_USERNAME/jena-fuseki:5.6.0 jena-fuseki/
-docker tag $DOCKER_USERNAME/jena-fuseki:5.6.0 $DOCKER_USERNAME/jena-fuseki:latest
+docker build -t $DOCKER_USERNAME/jena-fuseki:6.0.0 jena-fuseki/
+docker tag $DOCKER_USERNAME/jena-fuseki:6.0.0 $DOCKER_USERNAME/jena-fuseki:latest
 ```
 
 ### 3. Test Locally
 
 ```bash
 # Test Jena
-docker run --rm $DOCKER_USERNAME/jena:5.6.0 riot --version
+docker run --rm $DOCKER_USERNAME/jena:6.0.0 riot --version
 
 # Test Fuseki
-docker run --rm -p 3030:3030 $DOCKER_USERNAME/jena-fuseki:5.6.0
+docker run --rm -p 3030:3030 $DOCKER_USERNAME/jena-fuseki:6.0.0
 # Visit http://localhost:3030 in your browser
 # Ctrl+C to stop
 ```
@@ -55,11 +55,11 @@ docker run --rm -p 3030:3030 $DOCKER_USERNAME/jena-fuseki:5.6.0
 
 ```bash
 # Push Jena images
-docker push $DOCKER_USERNAME/jena:5.6.0
+docker push $DOCKER_USERNAME/jena:6.0.0
 docker push $DOCKER_USERNAME/jena:latest
 
 # Push Fuseki images
-docker push $DOCKER_USERNAME/jena-fuseki:5.6.0
+docker push $DOCKER_USERNAME/jena-fuseki:6.0.0
 docker push $DOCKER_USERNAME/jena-fuseki:latest
 ```
 
@@ -97,7 +97,7 @@ docker buildx create --name multiarch --use
 # Build and push for multiple platforms
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t $DOCKER_USERNAME/jena-fuseki:5.6.0 \
+  -t $DOCKER_USERNAME/jena-fuseki:6.0.0 \
   -t $DOCKER_USERNAME/jena-fuseki:latest \
   --push \
   jena-fuseki/
@@ -108,19 +108,19 @@ docker buildx build \
 ```bash
 # Build for AMD64
 podman build --platform linux/amd64 \
-  -t $DOCKER_USERNAME/jena-fuseki:5.6.0-amd64 jena-fuseki/
+  -t $DOCKER_USERNAME/jena-fuseki:6.0.0-amd64 jena-fuseki/
 
 # Build for ARM64
 podman build --platform linux/arm64 \
-  -t $DOCKER_USERNAME/jena-fuseki:5.6.0-arm64 jena-fuseki/
+  -t $DOCKER_USERNAME/jena-fuseki:6.0.0-arm64 jena-fuseki/
 
 # Create and push manifest
-podman manifest create $DOCKER_USERNAME/jena-fuseki:5.6.0
-podman manifest add $DOCKER_USERNAME/jena-fuseki:5.6.0 \
-  $DOCKER_USERNAME/jena-fuseki:5.6.0-amd64
-podman manifest add $DOCKER_USERNAME/jena-fuseki:5.6.0 \
-  $DOCKER_USERNAME/jena-fuseki:5.6.0-arm64
-podman manifest push $DOCKER_USERNAME/jena-fuseki:5.6.0
+podman manifest create $DOCKER_USERNAME/jena-fuseki:6.0.0
+podman manifest add $DOCKER_USERNAME/jena-fuseki:6.0.0 \
+  $DOCKER_USERNAME/jena-fuseki:6.0.0-amd64
+podman manifest add $DOCKER_USERNAME/jena-fuseki:6.0.0 \
+  $DOCKER_USERNAME/jena-fuseki:6.0.0-arm64
+podman manifest push $DOCKER_USERNAME/jena-fuseki:6.0.0
 ```
 
 ## Automated Builds with GitHub Actions
@@ -144,22 +144,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.DOCKER_USERNAME }}/jena-fuseki
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./jena-fuseki
           push: true
@@ -180,11 +180,11 @@ GitHub offers free container hosting:
 echo $GITHUB_TOKEN | docker login ghcr.io -u yourusername --password-stdin
 
 # Build and tag
-docker build -t ghcr.io/yourusername/jena-fuseki:5.6.0 jena-fuseki/
-docker tag ghcr.io/yourusername/jena-fuseki:5.6.0 ghcr.io/yourusername/jena-fuseki:latest
+docker build -t ghcr.io/yourusername/jena-fuseki:6.0.0 jena-fuseki/
+docker tag ghcr.io/yourusername/jena-fuseki:6.0.0 ghcr.io/yourusername/jena-fuseki:latest
 
 # Push
-docker push ghcr.io/yourusername/jena-fuseki:5.6.0
+docker push ghcr.io/yourusername/jena-fuseki:6.0.0
 docker push ghcr.io/yourusername/jena-fuseki:latest
 
 # Make public (in GitHub UI)
@@ -193,7 +193,7 @@ docker push ghcr.io/yourusername/jena-fuseki:latest
 
 ## Best Practices
 
-1. **Version Tags**: Always tag with version number (5.6.0) and latest
+1. **Version Tags**: Always tag with version number (6.0.0) and latest
 2. **README**: Add a good README to your Docker Hub repository
 3. **Automated Builds**: Use GitHub Actions for consistency
 4. **Security Scanning**: Enable Docker Hub's security scanning
@@ -205,13 +205,13 @@ docker push ghcr.io/yourusername/jena-fuseki:latest
 # One-liner to build and push everything
 DOCKER_USERNAME=yourusername && \
 docker login && \
-docker build -t $DOCKER_USERNAME/jena:5.6.0 jena/ && \
-docker build -t $DOCKER_USERNAME/jena-fuseki:5.6.0 jena-fuseki/ && \
-docker tag $DOCKER_USERNAME/jena:5.6.0 $DOCKER_USERNAME/jena:latest && \
-docker tag $DOCKER_USERNAME/jena-fuseki:5.6.0 $DOCKER_USERNAME/jena-fuseki:latest && \
-docker push $DOCKER_USERNAME/jena:5.6.0 && \
+docker build -t $DOCKER_USERNAME/jena:6.0.0 jena/ && \
+docker build -t $DOCKER_USERNAME/jena-fuseki:6.0.0 jena-fuseki/ && \
+docker tag $DOCKER_USERNAME/jena:6.0.0 $DOCKER_USERNAME/jena:latest && \
+docker tag $DOCKER_USERNAME/jena-fuseki:6.0.0 $DOCKER_USERNAME/jena-fuseki:latest && \
+docker push $DOCKER_USERNAME/jena:6.0.0 && \
 docker push $DOCKER_USERNAME/jena:latest && \
-docker push $DOCKER_USERNAME/jena-fuseki:5.6.0 && \
+docker push $DOCKER_USERNAME/jena-fuseki:6.0.0 && \
 docker push $DOCKER_USERNAME/jena-fuseki:latest
 ```
 
@@ -219,10 +219,10 @@ docker push $DOCKER_USERNAME/jena-fuseki:latest
 
 ```bash
 # Pull and run
-docker pull yourusername/jena-fuseki:5.6.0
-docker run -p 3030:3030 yourusername/jena-fuseki:5.6.0
+docker pull yourusername/jena-fuseki:6.0.0
+docker run -p 3030:3030 yourusername/jena-fuseki:6.0.0
 
 # Or with Podman
-podman pull docker.io/yourusername/jena-fuseki:5.6.0
-podman run -p 3030:3030 yourusername/jena-fuseki:5.6.0
+podman pull docker.io/yourusername/jena-fuseki:6.0.0
+podman run -p 3030:3030 yourusername/jena-fuseki:6.0.0
 ```

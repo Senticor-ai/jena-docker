@@ -1,15 +1,12 @@
 # Jena command line tools
 
-* Docker image: [stain/jena](https://hub.docker.com/r/stain/jena/)
-* Base images: [eclipse-temurin](https://hub.docker.com/r/_/eclipse-temurin/):21-jre-alpine
-* Source: [Dockerfile](https://github.com/stain/jena-docker/blob/master/jena/Dockerfile), [Apache Jena](http://jena.apache.org/download/)
+* Container image: `ghcr.io/senticor-ai/jena`
+* Base images: [eclipse-temurin](https://hub.docker.com/r/_/eclipse-temurin/):25-jre-alpine
+* Source: [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/master/jena/Dockerfile), [Apache Jena](https://jena.apache.org/download/)
+* Published tags: `6.0.0`, `6.0`, `6`, `latest`
 
 
-[![Build](https://github.com/stain/jena-docker/actions/workflows/main.yml/badge.svg)](https://github.com/stain/jena-docker/actions/workflows/main.yml)
-
-[![](https://images.microbadger.com/badges/image/stain/jena.svg)](https://microbadger.com/images/stain/jena "stain/jena")
-
-[![](https://images.microbadger.com/badges/version/stain/jena:4.8.0.svg)](https://github.com/stain/jena-docker/tree/master/jena "Jena 4.8.0")
+[![Build](https://github.com/Senticor-ai/jena-docker/actions/workflows/main.yml/badge.svg)](https://github.com/Senticor-ai/jena-docker/actions/workflows/main.yml)
 
 This docker image exposes the [Apache Jena](https://jena.apache.org/)
 command line tool [riot](https://jena.apache.org/documentation/io/#command-line-tools)
@@ -20,9 +17,9 @@ command line tools, like `rdfcompare`, `tdbloader` and `sparql`.
 
 Different licenses apply to files added by different Docker layers:
 
-* stain/jena [Dockerfile](https://github.com/stain/jena-docker/blob/master/jena/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+* `ghcr.io/senticor-ai/jena` [Dockerfile](https://github.com/Senticor-ai/jena-docker/blob/master/jena/Dockerfile): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 * Apache Jena (`/jena` in the image): [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-  See also: `docker run stain/jena cat /jena/NOTICE`
+  See also: `docker run ghcr.io/senticor-ai/jena cat /jena/NOTICE`
 * OpenJDK (`/opt/java/openjdk/` in the image): [GPL 2.0 with Classpath exception](https://openjdk.java.net/legal/gplv2+ce.html)
   See `/opt/java/openjdk/legal/` in image
 * Alpine GNU/Linux (rest of `/`): [GPL 2](http://www.gnu.org/licenses/gpl-2.0) and [Alpine License Information](https://gitlab.alpinelinux.org/alpine/aports/-/issues/7423)
@@ -31,12 +28,12 @@ Different licenses apply to files added by different Docker layers:
 
 ## Usage
 
-    docker run stain/jena riot http://www.w3.org/2013/TurtleTests/SPARQL_style_prefix.ttl
+    docker run ghcr.io/senticor-ai/jena riot http://www.w3.org/2013/TurtleTests/SPARQL_style_prefix.ttl
 
 For [documentation](https://jena.apache.org/documentation/io/#command-line-tools)
 about `riot`, try:
 
-    docker run stain/jena riot --help
+    docker run ghcr.io/senticor-ai/jena riot --help
 
 ```
     riot [--time] [--check|--noCheck] [--sink] [--base=IRI] [--out=FORMAT] file ...
@@ -70,18 +67,18 @@ The default working directory of the image is `/rdf`, which can be used with
 [Docker volumes](https://docs.docker.com/userguide/dockervolumes/) to
 process local files.
 
-    docker run --volume /home/stain/Downloads:/rdf stain/jena riot db-uniprot-ls.ttl
+    docker run --volume /home/stain/Downloads:/rdf ghcr.io/senticor-ai/jena riot db-uniprot-ls.ttl
 
 Note that `riot` does not currently have an option to specify the
 output file (see [JENA-1032](https://issues.apache.org/jira/browse/JENA-1032)),
 so you will need to use your host shell's
 pipeline:
 
-    docker run --volume /home/stain/Downloads:/rdf stain/jena riot db-uniprot-ls.ttl > /home/stain/Downloads/db-uniprot-ls.nq
+    docker run --volume /home/stain/Downloads:/rdf ghcr.io/senticor-ai/jena riot db-uniprot-ls.ttl > /home/stain/Downloads/db-uniprot-ls.nq
 
 To executable multiple `riot` commands within a Docker container:
 
-    docker run -it stain/jena sh
+    docker run -it ghcr.io/senticor-ai/jena sh
 
 Note that this image is based on an
 [Alpine Linux](https://www.debian.org/) installation. You can use
@@ -92,7 +89,7 @@ the `apk` command to install additional tools.
 
 All the command line tools of the Jena distribution are included.
 
-    docker run stain/jena ls /jena/bin
+    docker run ghcr.io/senticor-ai/jena ls /jena/bin
 
 - arq
 - infer
@@ -133,7 +130,7 @@ All the command line tools of the Jena distribution are included.
 Example:
 
 ```
-stain@biggie:~/src/jena/apache-jena$ docker run stain/jena sparql -h
+stain@biggie:~/src/jena/apache-jena$ docker run ghcr.io/senticor-ai/jena sparql -h
 sparql --data=<file> --query=<query>
   Control
       --explain              Explain and log query execution
@@ -193,7 +190,6 @@ For any issues with Jena or `riot`, feel free to
 
 
 For any issues with the packaging in this Docker image, or
-its [Dockerfile](https://github.com/stain/jena-docker/),
-please raise a [pull request](https://github.com/stain/jena-docker/pulls) or
-[issue](https://github.com/stain/jena-docker/issues).
-
+its [Dockerfile](https://github.com/Senticor-ai/jena-docker/),
+please raise a [pull request](https://github.com/Senticor-ai/jena-docker/pulls) or
+[issue](https://github.com/Senticor-ai/jena-docker/issues).

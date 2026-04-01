@@ -5,7 +5,7 @@
 [![Security Scan](https://github.com/Senticor-ai/jena-docker/actions/workflows/security-scan.yml/badge.svg)](https://github.com/Senticor-ai/jena-docker/actions/workflows/security-scan.yml)
 
 This repository hosts [Docker](https://www.docker.com/) recipes for distributing
-[Apache Jena](http://jena.apache.org/) **version 5.6.0**.
+[Apache Jena](https://jena.apache.org/) **version 6.0.0**.
 
 Two Docker images are available:
 
@@ -14,38 +14,39 @@ Two Docker images are available:
 
 These images are automatically published to GitHub Container Registry:
 
-- `ghcr.io/senticor-ai/jena:5.6.0` / `ghcr.io/senticor-ai/jena:latest`
-- `ghcr.io/senticor-ai/jena-fuseki:5.6.0` / `ghcr.io/senticor-ai/jena-fuseki:latest`
+- `ghcr.io/senticor-ai/jena:6.0.0` / `ghcr.io/senticor-ai/jena:latest`
+- `ghcr.io/senticor-ai/jena-fuseki:6.0.0` / `ghcr.io/senticor-ai/jena-fuseki:latest`
 
 ## Quick Start
 
 ```bash
 # Run Jena riot tool
-docker run --rm ghcr.io/senticor-ai/jena:5.6.0 riot --version
+docker run --rm ghcr.io/senticor-ai/jena:6.0.0 riot --version
 
 # Run Fuseki server
-docker run -p 3030:3030 -e ADMIN_PASSWORD=yourpassword ghcr.io/senticor-ai/jena-fuseki:5.6.0
+docker run -p 3030:3030 -e ADMIN_PASSWORD=yourpassword ghcr.io/senticor-ai/jena-fuseki:6.0.0
 
 # With Podman (rootless)
-podman run -p 3030:3030 -e ADMIN_PASSWORD=yourpassword ghcr.io/senticor-ai/jena-fuseki:5.6.0
+podman run -p 3030:3030 -e ADMIN_PASSWORD=yourpassword ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 Visit http://localhost:3030 for the Fuseki web interface.
 
 ## Features
 
-- ✅ **Latest Apache Jena**: Version 5.6.0 with latest bug fixes and features
+- ✅ **Latest Apache Jena**: Version 6.0.0 with latest bug fixes and features
 - ✅ **Podman Compatible**: Runs seamlessly with rootless Podman (UID 1000)
 - ✅ **Multi-Architecture**: AMD64 and ARM64 support
-- ✅ **Security**: Non-root user, minimal Alpine base, regular vulnerability scanning
+- ✅ **Security**: Non-root user, Dependabot alerts, secret scanning, and CI vulnerability gates
 - ✅ **Supply Chain**: SBOM (SPDX), SLSA provenance, signed attestations
-- ✅ **BSI TR-03183 Compliant**: Full software supply chain security compliance
+- ✅ **Compliance Evidence**: SBOM, provenance, license inventory, and audit artifacts
 - ✅ **Production Ready**: Comprehensive integration tests, health checks
 
 ## Security & Compliance
 
 This project includes:
-- 🔒 **Weekly vulnerability scanning** with Trivy
+- 🔒 **CI-enforced security scanning** with Trivy, Hadolint, and ShellCheck
+- 🚨 **GitHub-native protection** with Dependabot alerts, security updates, and secret scanning
 - 📋 **Software Bill of Materials** (SBOM) in SPDX format
 - 🔐 **Cryptographically signed** container images
 - 📊 **SLSA Build Provenance** attestations
@@ -61,13 +62,13 @@ SBOMs and attestations are also attached to the container images. You can access
 
 ```bash
 # View image attestations
-docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:5.6.0 --format "{{json .Attestations}}"
+docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:6.0.0 --format "{{json .Attestations}}"
 
 # Extract SBOM with Syft
-syft packages ghcr.io/senticor-ai/jena-fuseki:5.6.0 -o spdx-json
+syft packages ghcr.io/senticor-ai/jena-fuseki:6.0.0 -o spdx-json
 
 # Verify build provenance with cosign
-cosign verify-attestation --type slsaprovenance ghcr.io/senticor-ai/jena-fuseki:5.6.0
+cosign verify-attestation --type slsaprovenance ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 See [SECURITY.md](SECURITY.md) and [LICENSES.md](LICENSES.md) for details.
@@ -78,7 +79,7 @@ from Apache Software Foundation.
 
 ## Publishing
 
-Images are automatically built and published to GitHub Container Registry when changes are merged to the main branch. See [.github/PUBLISHING.md](.github/PUBLISHING.md) for details.
+Images are automatically built and published to GitHub Container Registry when changes land on `main` or `master`. See [.github/PUBLISHING.md](.github/PUBLISHING.md) for details.
 
 For local builds and publishing to other registries, see:
 - [DOCKER_HUB_GUIDE.md](DOCKER_HUB_GUIDE.md) - Publishing to Docker Hub
@@ -106,7 +107,7 @@ podman build -t jena-fuseki jena-fuseki
  
 ## Dockerfile overview
 
-The `Dockerfile`s for both images use the official [eclipse-temurin:21-jre-alpine](https://hub.docker.com/r/_/eclipse-temurin/) base image, which is based on the [`Alpine`](https://hub.docker.com/_/alpine/):3.19.1 image; this clocks in at about 62 MB.
+The `Dockerfile`s for both images use the official [eclipse-temurin:25-jre-alpine](https://hub.docker.com/r/_/eclipse-temurin/) base image. It keeps the images on a current Alpine-based Temurin JRE while still meeting Apache Jena 6's Java 21+ requirement.
 
 The `ENV` variables like `JENA_VERSION` and `FUSEKI_VERSION` determines which version of Jena and Fuseki are downloaded. Updating the version also requires updating the `JENA_SHA512` and `FUSEKI_SHA512` variables, which values should match the official Jena download `.tar.gz.sha512` hashes, as approved in their release `[VOTE]` emails.
 
@@ -119,7 +120,7 @@ Some files from the Apache Jena distributions are stripped, e.g. javadocs and th
 The Fuseki image includes some [helper scripts](jena-fuseki/load.sh) to do [tdb loading](https://jena.apache.org/documentation/tdb/commands.html) using `fuseki-server.jar`.
 In addition, Fuseki has a [`docker-entrypoint.sh`](https://github.com/Senticor-ai/jena-docker/blob/master/jena-fuseki/docker-entrypoint.sh) that populates `shiro.ini` with the password provided as `-e ADMIN_PASSWORD` to Docker, or with a new randomly generated password that is printed the first time.
 
-**Note**: Fuseki 5.6.0 requires explicit SessionManager configuration in shiro.ini due to the migration from javax.servlet to jakarta.servlet. This is included in the image.
+**Note**: Fuseki 6.x requires explicit SessionManager configuration in `shiro.ini` due to the migration from `javax.servlet` to `jakarta.servlet`. This is included in the image.
 
 ## Contributing
 

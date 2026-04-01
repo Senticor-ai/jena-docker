@@ -6,16 +6,18 @@ We provide security updates for the following versions:
 
 | Version | Supported          | Base Image             |
 | ------- | ------------------ | ---------------------- |
-| 5.6.0   | ✅ Yes (Current)   | eclipse-temurin:21-jre-alpine |
-| 5.1.0   | ⚠️ Limited         | eclipse-temurin:21-jre-alpine |
-| < 5.0   | ❌ No              | -                      |
+| 6.0.0   | ✅ Yes (Current)   | eclipse-temurin:25-jre-alpine |
+| 5.6.0   | ⚠️ Limited         | eclipse-temurin:21-jre-alpine |
+| < 5.6.0 | ❌ No              | -                      |
 
 ## Security Features
 
 ### Automated Security Scanning
 
-- **Trivy**: Weekly vulnerability scans uploaded to GitHub Security
-- **Dependabot**: Automatic dependency updates for base images and GitHub Actions
+- **Trivy**: Repository misconfiguration, secret, and image vulnerability scans uploaded to GitHub Security
+- **Hadolint + ShellCheck**: Dockerfile and shell safety checks enforced in CI
+- **Dependabot**: Alerts, automated security updates, and version updates for base images and GitHub Actions
+- **Secret scanning**: GitHub secret scanning and push protection enabled on the repository
 - **SBOM**: Software Bill of Materials generated for every build
 - **Provenance**: Build attestations for supply chain security
 
@@ -79,7 +81,7 @@ Report to this repository:
 
 ```bash
 # Good
-docker pull ghcr.io/senticor-ai/jena-fuseki:5.6.0
+docker pull ghcr.io/senticor-ai/jena-fuseki:6.0.0
 
 # Avoid (less predictable)
 docker pull ghcr.io/senticor-ai/jena-fuseki:latest
@@ -90,7 +92,7 @@ docker pull ghcr.io/senticor-ai/jena-fuseki:latest
 ```bash
 # Generate strong password
 docker run -e ADMIN_PASSWORD=$(openssl rand -base64 32) \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 #### 3. Run as Non-Root (Podman)
@@ -98,7 +100,7 @@ docker run -e ADMIN_PASSWORD=$(openssl rand -base64 32) \
 ```bash
 # Rootless Podman (recommended)
 podman run --rm -p 3030:3030 \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 #### 4. Use Read-Only Root Filesystem
@@ -107,7 +109,7 @@ podman run --rm -p 3030:3030 \
 docker run --read-only \
   -v fuseki-data:/fuseki \
   -v /tmp:/tmp \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 #### 5. Drop Unnecessary Capabilities
@@ -115,7 +117,7 @@ docker run --read-only \
 ```bash
 docker run --cap-drop=ALL \
   --cap-add=NET_BIND_SERVICE \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 #### 6. Use Network Isolation
@@ -125,17 +127,17 @@ docker run --cap-drop=ALL \
 docker network create --internal fuseki-net
 
 docker run --network fuseki-net \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 #### 7. Scan Before Deployment
 
 ```bash
 # Scan with Trivy
-trivy image ghcr.io/senticor-ai/jena-fuseki:5.6.0
+trivy image ghcr.io/senticor-ai/jena-fuseki:6.0.0
 
 # Scan with Docker Scout
-docker scout cves ghcr.io/senticor-ai/jena-fuseki:5.6.0
+docker scout cves ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 ### Production Deployment
@@ -148,7 +150,7 @@ Fuseki should be behind a reverse proxy with TLS:
 # Example with Traefik
 services:
   fuseki:
-    image: ghcr.io/senticor-ai/jena-fuseki:5.6.0
+    image: ghcr.io/senticor-ai/jena-fuseki:6.0.0
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fuseki.rule=Host(`fuseki.example.com`)"
@@ -163,7 +165,7 @@ docker run \
   --memory="2g" \
   --cpus="2" \
   --pids-limit=100 \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 #### Configure Firewall
@@ -196,7 +198,7 @@ iptables -A INPUT -p tcp --dport 3030 -j DROP
 
 ```bash
 docker run -e JVM_ARGS="-Xmx2g -Xms2g" \
-  ghcr.io/senticor-ai/jena-fuseki:5.6.0
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0
 ```
 
 ### 4. Data Persistence
@@ -251,5 +253,5 @@ All builds are:
 
 ---
 
-Last Updated: 2025-11-16
-Image Version: 5.6.0
+Last Updated: 2026-04-01
+Image Version: 6.0.0

@@ -13,7 +13,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
@@ -27,14 +27,14 @@ RUN set -eux; \
 
 
 # Update below according to https://jena.apache.org/download/
-# and checksum for apache-jena-5.x.x.tar.gz.sha512
-ENV JENA_SHA512=220ff50c3b6803c2cdade5479f8812700b281f4153fd73cdb83277b30f3d2c9e8a4a49d09717cfa7dde4fe5c7132a2aaaeeef3fbc474a6773b3d9deb5d63cbaa
-ENV JENA_VERSION=5.6.0
+# and checksum for apache-jena-6.x.x.tar.gz.sha512
+ENV JENA_SHA512=c66b413f0c97e465c8a5a71f2718116134c65efa71205e136a42ad0ee6d39deece0dcbcc99801d806e4b60af5fe886c72eb53c77bc464fe9d2d0f1ba2d3ec1fe
+ENV JENA_VERSION=6.0.0
 ENV ASF_MIRROR=https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
 ENV ASF_ARCHIVE=https://archive.apache.org/dist/
 
-LABEL org.opencontainers.image.url="https://github.com/stain/jena-docker/tree/master/jena"
-LABEL org.opencontainers.image.source="https://github.com/stain/jena-docker/"
+LABEL org.opencontainers.image.url="https://github.com/Senticor-ai/jena-docker/tree/master/jena"
+LABEL org.opencontainers.image.source="https://github.com/Senticor-ai/jena-docker"
 LABEL org.opencontainers.image.documentation="https://jena.apache.org/documentation/tools/"
 LABEL org.opencontainers.image.title="Apache Jena"
 LABEL org.opencontainers.image.description="Jena riot is a command line tool for parsing and validating multiple RDF formats"

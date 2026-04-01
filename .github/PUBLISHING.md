@@ -7,16 +7,18 @@ This repository has automated GitHub Actions workflows to publish container imag
 Images are **automatically published** to GitHub Container Registry when you:
 - Push to `main` or `master` branch
 - Create a release
-- Create a version tag (e.g., `v5.6.0`)
+- Create a version tag (e.g., `v6.0.0`)
 - Manually trigger the workflow
 
 ### Published Images
 
 After the workflow runs, images will be available at:
 - `ghcr.io/<owner>/jena:latest`
-- `ghcr.io/<owner>/jena:5.6.0`
+- `ghcr.io/<owner>/jena:6.0.0`
 - `ghcr.io/<owner>/jena-fuseki:latest`
-- `ghcr.io/<owner>/jena-fuseki:5.6.0`
+- `ghcr.io/<owner>/jena-fuseki:6.0.0`
+
+The workflow now derives `<owner>` from the repository owner automatically and normalizes it to lowercase for GHCR compatibility.
 
 ### Using the Images
 
@@ -80,11 +82,11 @@ The correct architecture is automatically selected when you pull the image.
 
 The workflows automatically create these tags:
 - `latest` - Latest build from main/master branch
-- `5.6.0` - Specific version
-- `5.6` - Major.minor version
-- `5` - Major version
+- `6.0.0` - Specific version
+- `6.0` - Major.minor version
+- `6` - Major version
 - `main-<sha>` - Branch name with git SHA
-- `v5.6.0` - If you push a git tag like `v5.6.0`
+- `v6.0.0` - If you push a git tag like `v6.0.0`
 
 ## Workflow Files
 
@@ -97,8 +99,8 @@ The workflows automatically create these tags:
 ### Method 1: Push a Tag
 
 ```bash
-git tag v5.6.0
-git push origin v5.6.0
+git tag v6.0.0
+git push origin v6.0.0
 ```
 
 This will trigger both build and publish workflows.
@@ -107,7 +109,7 @@ This will trigger both build and publish workflows.
 
 1. Go to your repository → Releases
 2. Click "Draft a new release"
-3. Create a new tag (e.g., `v5.6.0`)
+3. Create a new tag (e.g., `v6.0.0`)
 4. Fill in release notes
 5. Click "Publish release"
 
@@ -139,6 +141,7 @@ The workflows use GitHub Actions cache to speed up builds:
 
 - Uses `GITHUB_TOKEN` for GHCR (automatically provided by GitHub)
 - Requires explicit secrets for Docker Hub
+- Smoke-tests each image before publishing
 - Builds are isolated in GitHub's infrastructure
 - SBOM and provenance attestations generated (GHCR only)
 

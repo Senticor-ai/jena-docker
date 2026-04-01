@@ -15,8 +15,8 @@ These images are designed with Podman compatibility in mind:
 
 ```bash
 # Build both images
-podman build -t jena:5.6.0 jena/
-podman build -t jena-fuseki:5.6.0 jena-fuseki/
+podman build -t jena:6.0.0 jena/
+podman build -t jena-fuseki:6.0.0 jena-fuseki/
 
 # Or use the build script
 CONTAINER_TOOL=podman ./build-and-push.sh
@@ -26,10 +26,10 @@ CONTAINER_TOOL=podman ./build-and-push.sh
 
 ```bash
 # Test riot
-podman run --rm jena:5.6.0 riot --version
+podman run --rm jena:6.0.0 riot --version
 
 # Process RDF files from current directory
-podman run --rm -v $(pwd):/rdf:Z jena:5.6.0 riot yourfile.ttl
+podman run --rm -v $(pwd):/rdf:Z jena:6.0.0 riot yourfile.ttl
 ```
 
 **Note**: The `:Z` suffix on volumes tells Podman to relabel the content for SELinux compatibility.
@@ -38,7 +38,7 @@ podman run --rm -v $(pwd):/rdf:Z jena:5.6.0 riot yourfile.ttl
 
 ```bash
 # Simple run (data lost on restart)
-podman run -p 3030:3030 -e ADMIN_PASSWORD=admin123 jena-fuseki:5.6.0
+podman run -p 3030:3030 -e ADMIN_PASSWORD=admin123 jena-fuseki:6.0.0
 
 # With persistent data
 podman volume create fuseki-data
@@ -46,7 +46,7 @@ podman run -d --name fuseki \
   -p 3030:3030 \
   -e ADMIN_PASSWORD=admin123 \
   -v fuseki-data:/fuseki:Z \
-  jena-fuseki:5.6.0
+  jena-fuseki:6.0.0
 
 # Check logs
 podman logs fuseki
@@ -67,7 +67,7 @@ podman unshare chown 1000:1000 ~/fuseki-data
 podman run -d --name fuseki \
   -p 3030:3030 \
   -v ~/fuseki-data:/fuseki:Z \
-  jena-fuseki:5.6.0
+  jena-fuseki:6.0.0
 ```
 
 ## Using Podman Pods (Docker Compose Alternative)
@@ -82,7 +82,7 @@ podman pod create --name jena-pod -p 3030:3030
 podman run -d --pod jena-pod \
   --name fuseki \
   -v fuseki-data:/fuseki:Z \
-  jena-fuseki:5.6.0
+  jena-fuseki:6.0.0
 
 # Add other containers to the same pod (they share network)
 # podman run -d --pod jena-pod ...
@@ -97,8 +97,8 @@ podman run -d --pod jena-pod \
 podman login docker.io
 
 # Tag and push
-podman tag jena-fuseki:5.6.0 docker.io/yourusername/jena-fuseki:5.6.0
-podman push docker.io/yourusername/jena-fuseki:5.6.0
+podman tag jena-fuseki:6.0.0 docker.io/yourusername/jena-fuseki:6.0.0
+podman push docker.io/yourusername/jena-fuseki:6.0.0
 ```
 
 ### GitHub Container Registry (ghcr.io)
@@ -108,8 +108,8 @@ podman push docker.io/yourusername/jena-fuseki:5.6.0
 echo $GITHUB_TOKEN | podman login ghcr.io -u yourusername --password-stdin
 
 # Tag and push
-podman tag jena-fuseki:5.6.0 ghcr.io/yourusername/jena-fuseki:5.6.0
-podman push ghcr.io/yourusername/jena-fuseki:5.6.0
+podman tag jena-fuseki:6.0.0 ghcr.io/yourusername/jena-fuseki:6.0.0
+podman push ghcr.io/yourusername/jena-fuseki:6.0.0
 ```
 
 ### Quay.io
@@ -119,8 +119,8 @@ podman push ghcr.io/yourusername/jena-fuseki:5.6.0
 podman login quay.io
 
 # Tag and push
-podman tag jena-fuseki:5.6.0 quay.io/yourusername/jena-fuseki:5.6.0
-podman push quay.io/yourusername/jena-fuseki:5.6.0
+podman tag jena-fuseki:6.0.0 quay.io/yourusername/jena-fuseki:6.0.0
+podman push quay.io/yourusername/jena-fuseki:6.0.0
 ```
 
 ## Systemd Integration (Podman Specific)
@@ -132,7 +132,7 @@ Run Fuseki as a systemd service:
 podman run -d --name fuseki \
   -p 3030:3030 \
   -v fuseki-data:/fuseki:Z \
-  jena-fuseki:5.6.0
+  jena-fuseki:6.0.0
 
 podman generate systemd --new --files --name fuseki
 
@@ -216,7 +216,7 @@ chcon -Rt svirt_sandbox_file_t ~/fuseki-data
 sudo ss -tulpn | grep 3030
 
 # Use a different port
-podman run -p 8080:3030 jena-fuseki:5.6.0
+podman run -p 8080:3030 jena-fuseki:6.0.0
 ```
 
 ## Resources

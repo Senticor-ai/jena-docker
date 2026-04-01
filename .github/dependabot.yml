@@ -1,36 +1,56 @@
 version: 2
 updates:
-  # GitHub Actions workflows
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "master"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "github-actions"
+      - "security"
     commit-message:
       prefix: "ci"
       include: "scope"
 
-  # Docker base images
   - package-ecosystem: "docker"
     directory: "/jena"
+    target-branch: "master"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "05:15"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "docker"
+      - "security"
     commit-message:
       prefix: "build"
       include: "scope"
 
   - package-ecosystem: "docker"
     directory: "/jena-fuseki"
+    target-branch: "master"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "05:30"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "docker"
+      - "security"
     commit-message:
       prefix: "build"
       include: "scope"

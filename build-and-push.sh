@@ -37,19 +37,19 @@ echo "Fuseki version: $FUSEKI_VERSION"
 # Build Jena
 echo ""
 echo "Building Jena image..."
-$CONTAINER_TOOL build -t $DOCKER_USERNAME/jena:$JENA_VERSION jena/
-$CONTAINER_TOOL tag $DOCKER_USERNAME/jena:$JENA_VERSION $DOCKER_USERNAME/jena:latest
+$CONTAINER_TOOL build -t "$DOCKER_USERNAME/jena:$JENA_VERSION" jena/
+$CONTAINER_TOOL tag "$DOCKER_USERNAME/jena:$JENA_VERSION" "$DOCKER_USERNAME/jena:latest"
 
 # Build Jena Fuseki
 echo ""
 echo "Building Jena Fuseki image..."
-$CONTAINER_TOOL build -t $DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION jena-fuseki/
-$CONTAINER_TOOL tag $DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION $DOCKER_USERNAME/jena-fuseki:latest
+$CONTAINER_TOOL build -t "$DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION" jena-fuseki/
+$CONTAINER_TOOL tag "$DOCKER_USERNAME/jena-fuseki:$FUSEKI_VERSION" "$DOCKER_USERNAME/jena-fuseki:latest"
 
 # Test images
 echo ""
 echo "Testing images..."
-$CONTAINER_TOOL run --rm $DOCKER_USERNAME/jena:$JENA_VERSION riot --version
+$CONTAINER_TOOL run --rm "$DOCKER_USERNAME/jena:$JENA_VERSION" riot --version
 echo "✓ Jena image works"
 
 # Push to registry (optional - uncomment when ready)
