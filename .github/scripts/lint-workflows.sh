@@ -20,7 +20,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd -- "${SCRIPT_DIR}/../.." && pwd)
 TOOLS_DIR="${REPO_ROOT}/.github/tools"
-ACTIONLINT_VERSION="1.7.1"
+ACTIONLINT_VERSION="1.7.12"
 LOCAL_ACTIONLINT="${TOOLS_DIR}/actionlint"
 
 log() {

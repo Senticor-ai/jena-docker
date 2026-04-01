@@ -196,29 +196,36 @@ jobs:
           sbom: true
           provenance: mode=max
 
-      - name: Generate SPDX SBOM with Syft
-        uses: anchore/sbom-action@v0.24.0
-        with:
-          image: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
-          format: spdx-json
-          artifact-name: sbom-${{ matrix.image.name }}-spdx
-          output-file: sbom-${{ matrix.image.name }}.spdx.json
-          upload-artifact: true
-          upload-release-assets: false
-          registry-username: ${{ github.actor }}
-          registry-password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Syft
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
-      - name: Generate CycloneDX SBOM with Syft
-        uses: anchore/sbom-action@v0.24.0
+      - name: Generate SBOMs with Syft
+        shell: bash
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          env SYFT_CHECK_FOR_APP_UPDATE=0 syft scan "$IMAGE_REF" \
+            --output "spdx-json=sbom-${{ matrix.image.name }}.spdx.json"
+          env SYFT_CHECK_FOR_APP_UPDATE=0 syft scan "$IMAGE_REF" \
+            --output "cyclonedx-json=sbom-${{ matrix.image.name }}.cdx.json"
+
+      - name: Upload SPDX SBOM
+        uses: actions/upload-artifact@v7
         with:
-          image: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
-          format: cyclonedx-json
-          artifact-name: sbom-${{ matrix.image.name }}-cyclonedx
-          output-file: sbom-${{ matrix.image.name }}.cdx.json
-          upload-artifact: true
-          upload-release-assets: false
-          registry-username: ${{ github.actor }}
-          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          name: sbom-${{ matrix.image.name }}-spdx
+          path: sbom-${{ matrix.image.name }}.spdx.json
+          retention-days: 30
+
+      - name: Upload CycloneDX SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ matrix.image.name }}-cyclonedx
+          path: sbom-${{ matrix.image.name }}.cdx.json
+          retention-days: 30
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v4

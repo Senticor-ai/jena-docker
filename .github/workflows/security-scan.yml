@@ -41,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           for dockerfile in jena/Dockerfile jena-fuseki/Dockerfile; do
-            docker run --rm -i hadolint/hadolint < "$dockerfile"
+            docker run --rm -i hadolint/hadolint hadolint --failure-threshold error - < "$dockerfile"
           done
 
       - name: Install ShellCheck
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload repository scan results
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('trivy-repository.sarif') != ''
         with:
           sarif_file: trivy-repository.sarif
           category: trivy-repository
