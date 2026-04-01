@@ -61,7 +61,8 @@ jobs:
             jena-fuseki/docker-entrypoint.sh \
             jena-fuseki/load.sh \
             jena-fuseki/tdbloader \
-            jena-fuseki/tdbloader2
+            jena-fuseki/tdbloader2 \
+            tests/*.sh
 
       - name: Scan repository for secrets and misconfiguration
         uses: aquasecurity/trivy-action@v0.35.0
