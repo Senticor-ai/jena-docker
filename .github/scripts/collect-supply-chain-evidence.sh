@@ -78,7 +78,7 @@ done
 
 required_tools=(syft cosign)
 if [ "$SKIP_IMAGETOOLS" != "1" ]; then
-  required_tools=("$CONTAINER_CLI" "${required_tools[@]}")
+  required_tools=("$CONTAINER_CLI" jq "${required_tools[@]}")
 fi
 
 for tool in "${required_tools[@]}"; do
@@ -106,6 +106,26 @@ run_and_capture() {
     fi
     return $status
   fi
+}
+
+capture_attestations() {
+  local ref=$1
+  local output_file=$2
+  local tmp_output
+
+  tmp_output=$(mktemp)
+  if {
+    "$CONTAINER_CLI" buildx imagetools inspect "$ref" --raw 2>"$output_file" \
+      | jq '.manifests // [] | map(select(.annotations["vnd.docker.reference.type"] == "attestation-manifest"))' >"$tmp_output"
+  } 2>>"$output_file"; then
+    mv "$tmp_output" "$output_file"
+    echo "Captured ${CONTAINER_CLI} buildx imagetools inspect output to ${output_file}"
+    return 0
+  fi
+
+  local status=$?
+  rm -f "$tmp_output"
+  return $status
 }
 
 process_image() {
@@ -157,14 +177,18 @@ process_image() {
     echo "Skipping imagetools inspect for ${ref} (SKIP_IMAGETOOLS=1)"
   else
     set +e
-    run_and_capture "$attestation_file" "${CONTAINER_CLI} buildx imagetools inspect" \
-      "$CONTAINER_CLI" buildx imagetools inspect "$ref" --format '{{json .Attestations}}'
+    capture_attestations "$ref" "$attestation_file"
     imagetools_status=$?
     set -e
     if [ $imagetools_status -ne 0 ]; then
+      tail -n 50 "$attestation_file" >&2 || true
+      if grep -qi 'denied' "$attestation_file"; then
+        echo "::error ::Registry denied access. Ensure your ghcr.io credentials (.env GHCR_USERNAME/GHCR_TOKEN) have read:packages scope and access to ${REGISTRY} images." >&2
+      fi
       if [ "$IMAGETOOLS_OPTIONAL" = "1" ]; then
-        echo "::warning ::${CONTAINER_CLI} buildx imagetools inspect failed for ${ref}; continuing because IMAGETOOLS_OPTIONAL=1" >&2
+        echo "::warning ::${CONTAINER_CLI} buildx imagetools inspect failed for ${ref}; continuing because IMAGETOOLS_OPTIONAL=1 (see ${attestation_file})" >&2
       else
+        echo "::error ::${CONTAINER_CLI} buildx imagetools inspect failed (see ${attestation_file})" >&2
         return $imagetools_status
       fi
     fi

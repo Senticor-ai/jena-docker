@@ -62,7 +62,8 @@ SBOMs and attestations are also attached to the container images. You can access
 
 ```bash
 # View image attestations
-docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:6.0.0 --format "{{json .Attestations}}"
+docker buildx imagetools inspect ghcr.io/senticor-ai/jena-fuseki:6.0.0 --raw \
+  | jq '.manifests | map(select(.annotations["vnd.docker.reference.type"] == "attestation-manifest"))'
 
 # Extract SBOM with Syft
 syft packages ghcr.io/senticor-ai/jena-fuseki:6.0.0 -o spdx-json

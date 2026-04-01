@@ -155,7 +155,8 @@ Every published image includes:
 ```bash
 # Pull and inspect attestations
 docker buildx imagetools inspect \
-  ghcr.io/senticor-ai/jena-fuseki:6.0.0 --format "{{json .Attestations}}"
+  ghcr.io/senticor-ai/jena-fuseki:6.0.0 --raw \
+  | jq '.manifests | map(select(.annotations["vnd.docker.reference.type"] == "attestation-manifest"))'
 
 # Using cosign (if available)
 cosign verify-attestation \

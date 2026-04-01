@@ -75,13 +75,13 @@ while IFS='|' read -r src title slug; do
   if [ -f "$src" ]; then
     dest="public/docs/${slug}.html"
     DOC_SOURCE="$src" DOC_DEST="$dest" DOC_TITLE="$title" python3 <<'PY'
-import html, os, pathlib, datetime
+import datetime, html, os, pathlib
 path = pathlib.Path(os.environ["DOC_SOURCE"])
 dest = pathlib.Path(os.environ["DOC_DEST"])
 title = os.environ["DOC_TITLE"]
 text = path.read_text(encoding="utf-8")
 escaped = html.escape(text)
-updated = datetime.datetime.utcfromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S UTC")
+updated = datetime.datetime.fromtimestamp(path.stat().st_mtime, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 template = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -714,7 +714,7 @@ for image in jena jena-fuseki; do
   title="${IMAGE_TITLES[$image]}"
   version="${IMAGE_VERSIONS[$image]}"
   image_ref="${REGISTRY}/${image}:${version}"
-  att_cmd=$(html_escape "docker buildx imagetools inspect ${image_ref} --format \"{{json .Attestations}}\"")
+  att_cmd=$(html_escape "docker buildx imagetools inspect ${image_ref} --raw | jq '.manifests | map(select(.annotations[\"vnd.docker.reference.type\"] == \"attestation-manifest\"))'")
   syft_cmd=$(html_escape "syft packages ${image_ref} -o spdx-json")
   syft_cdx_cmd=$(html_escape "syft packages ${image_ref} -o cyclonedx-json")
   cosign_cmd=$(html_escape "COSIGN_EXPERIMENTAL=1 cosign verify-attestation --type slsaprovenance1 --certificate-identity-regexp \"https://github.com/${GITHUB_REPOSITORY}/.+\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\" ${image_ref}")
