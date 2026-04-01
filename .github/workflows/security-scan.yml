@@ -125,6 +125,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ matrix.image.name }}:scan
+          scanners: vuln
           format: sarif
           output: trivy-${{ matrix.image.name }}.sarif
           severity: HIGH,CRITICAL
@@ -143,6 +144,7 @@ jobs:
         if: always()
         with:
           image-ref: ${{ matrix.image.name }}:scan
+          scanners: vuln
           format: json
           output: trivy-${{ matrix.image.name }}.json
           severity: HIGH,CRITICAL
