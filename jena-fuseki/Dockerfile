@@ -19,9 +19,8 @@ LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
 ENV LANG=C.UTF-8
 RUN set -eux; \
-    apk -U upgrade; \
-    apk add bash curl ca-certificates findutils coreutils gettext pwgen procps tini; \
-    rm -rf /var/cache/apk/*
+    apk --no-cache upgrade; \
+    apk add --no-cache bash curl ca-certificates findutils coreutils gettext pwgen procps tini
 
 
 # Update below according to https://jena.apache.org/download/

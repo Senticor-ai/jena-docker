@@ -20,9 +20,8 @@ LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 ENV LANG=C.UTF-8
 
 RUN set -eux; \
-    apk -U upgrade; \
-    apk add bash curl ca-certificates findutils coreutils procps; \
-    rm -rf /var/cache/apk/*
+    apk --no-cache upgrade; \
+    apk add --no-cache bash curl ca-certificates findutils coreutils procps
 
 
 
@@ -60,9 +59,15 @@ ENV PATH=$PATH:/jena/bin
 # Check it works
 RUN riot  --version
 
+# Create a dedicated runtime user and writable working directory.
+RUN addgroup -g 1000 -S jena && \
+    adduser -u 1000 -G jena -S -D -H jena && \
+    mkdir -p /rdf && \
+    chown -R jena:jena /rdf
+
 # Default dir /rdf, can be used with
 # --volume
-RUN mkdir /rdf
 WORKDIR /rdf
+USER jena
 #VOLUME /rdf
 CMD ["/jena/bin/riot"]
