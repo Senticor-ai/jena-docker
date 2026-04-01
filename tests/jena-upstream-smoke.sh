@@ -48,6 +48,9 @@ cat > "$tmpdir/shacl-data.ttl" <<'EOF'
 ex:alice a ex:Person .
 EOF
 
+chmod 755 "$tmpdir"
+chmod 644 "$tmpdir"/*
+
 echo "Checking riot version"
 "$runtime" run --rm "$image" riot --version | grep -q "Apache Jena"
 
