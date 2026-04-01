@@ -32,8 +32,9 @@ if [ ! -f "$FUSEKI_BASE/shiro.ini" ] ; then
   echo "###################################"
 fi
 
-if [ -d "/fuseki-extra" ] && [ ! -d "$FUSEKI_BASE/extra" ] ; then
-  ln -s "/fuseki-extra" "$FUSEKI_BASE/extra" 
+if [ -d "/fuseki-extra" ] ; then
+  mkdir -p "$FUSEKI_BASE/extra"
+  cp -n /fuseki-extra/* "$FUSEKI_BASE/extra/" 2>/dev/null || true
 fi
 
 # $ADMIN_PASSWORD only modifies if ${ADMIN_PASSWORD}

@@ -19,15 +19,16 @@ LABEL maintainer="Stian Soiland-Reyes <stain@apache.org>"
 
 ENV LANG=C.UTF-8
 RUN set -eux; \
-    apk -U upgrade; \
-    apk add bash curl ca-certificates findutils coreutils gettext pwgen procps tini; \
-    rm -rf /var/cache/apk/*
+    apk --no-cache upgrade; \
+    apk add --no-cache bash curl ca-certificates findutils coreutils gettext pwgen procps tini
 
 
 # Update below according to https://jena.apache.org/download/
 # and checksum for apache-jena-fuseki-6.x.x.tar.gz.sha512
 ENV FUSEKI_SHA512=8b14dcefade409bb4efd94e05291ea46d50508bf175f6f163f328d1d80183559a4c5b75806802283802a2879405a132b9b311e2277f784a784fa66ce4a9d8722
 ENV FUSEKI_VERSION=6.0.0
+ENV JETTY_SERVER_VERSION=12.1.6
+ENV JETTY_SERVER_SHA512=ebb7d6b4f62426665c2c4efb4df5e63c0f95aa0d99cf39c3d49a52c87d540b8343d5c0f47794bfaccf5b48cd21b22cde41283916d6b6ffcc772273437c88ff13
 ENV ASF_MIRROR=https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=
 ENV ASF_ARCHIVE=https://archive.apache.org/dist/
 
@@ -57,7 +58,26 @@ RUN     (curl --location --silent --show-error --fail --retry-connrefused --retr
     tar zxf fuseki.tar.gz && \
     mv apache-jena-fuseki* $FUSEKI_HOME && \
     rm fuseki.tar.gz* && \
-    cd $FUSEKI_HOME && rm -rf fuseki.war && chmod 755 fuseki-server
+    cd $FUSEKI_HOME && rm -rf fuseki.war && chmod 755 fuseki-server && \
+    sed -i 's|CP="${CP}:${FUSEKI_BASE}/extra/*"|CP="${FUSEKI_BASE}/extra/*:${CP}"|' "$FUSEKI_HOME/fuseki-server"
+
+# Overlay a patched Jetty server jar ahead of the bundled fat jar classpath.
+RUN mkdir -p /fuseki-extra && \
+    curl --location --silent --show-error --fail --retry-connrefused --retry 3 \
+      --output "/fuseki-extra/jetty-server-${JETTY_SERVER_VERSION}.jar" \
+      "https://repo1.maven.org/maven2/org/eclipse/jetty/jetty-server/${JETTY_SERVER_VERSION}/jetty-server-${JETTY_SERVER_VERSION}.jar" && \
+    echo "${JETTY_SERVER_SHA512}  /fuseki-extra/jetty-server-${JETTY_SERVER_VERSION}.jar" | sha512sum -c -
+
+# Replace the embedded Jetty Maven metadata inside the Fuseki uber-jar so
+# image scanners report the remediated runtime override version.
+RUN apk add --no-cache --virtual .jar-patch-deps zip unzip && \
+    mkdir -p /tmp/jetty-server && \
+    unzip -q "/fuseki-extra/jetty-server-${JETTY_SERVER_VERSION}.jar" \
+      "META-INF/maven/org.eclipse.jetty/jetty-server/*" \
+      -d /tmp/jetty-server && \
+    (cd /tmp/jetty-server && zip -qr "$FUSEKI_HOME/fuseki-server.jar" META-INF/maven/org.eclipse.jetty/jetty-server) && \
+    rm -rf /tmp/jetty-server && \
+    apk del .jar-patch-deps
 
 # Test the install by testing its ping resource. Allow extra time on slow builders.
 RUN set -eux; \

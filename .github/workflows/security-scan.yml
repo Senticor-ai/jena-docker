@@ -41,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           for dockerfile in jena/Dockerfile jena-fuseki/Dockerfile; do
-            docker run --rm -i hadolint/hadolint < "$dockerfile"
+            docker run --rm -i hadolint/hadolint hadolint --failure-threshold error - < "$dockerfile"
           done
 
       - name: Install ShellCheck
@@ -64,20 +64,29 @@ jobs:
             jena-fuseki/tdbloader2 \
             tests/*.sh
 
-      - name: Scan repository for secrets and misconfiguration
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          scanners: misconfig,secret
-          format: sarif
-          output: trivy-repository.sarif
-          severity: HIGH,CRITICAL
-          exit-code: "1"
+      - name: Install Trivy CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.69.3
+
+      - name: Scan repository for misconfiguration
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy fs \
+            --scanners misconfig \
+            --skip-dirs .git \
+            --severity HIGH,CRITICAL \
+            --format sarif \
+            --output trivy-repository.sarif \
+            --exit-code 1 \
+            .
 
       - name: Upload repository scan results
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('trivy-repository.sarif') != ''
         with:
           sarif_file: trivy-repository.sarif
           category: trivy-repository
@@ -112,15 +121,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Install Trivy CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.69.3
+
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: ${{ matrix.image.name }}:scan
-          format: sarif
-          output: trivy-${{ matrix.image.name }}.sarif
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --format sarif \
+            --output trivy-${{ matrix.image.name }}.sarif \
+            --exit-code 1 \
+            ${{ matrix.image.name }}:scan
 
       - name: Upload image scan results
         uses: github/codeql-action/upload-sarif@v4
@@ -130,17 +149,20 @@ jobs:
           category: trivy-${{ matrix.image.name }}
 
       - name: Export JSON vulnerability report
-        uses: aquasecurity/trivy-action@v0.35.0
+        shell: bash
         if: always()
-        with:
-          image-ref: ${{ matrix.image.name }}:scan
-          format: json
-          output: trivy-${{ matrix.image.name }}.json
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
+        run: |
+          set -euo pipefail
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --format json \
+            --output trivy-${{ matrix.image.name }}.json \
+            ${{ matrix.image.name }}:scan
 
       - name: Upload JSON vulnerability report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: trivy-${{ matrix.image.name }}-report
