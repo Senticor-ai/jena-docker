@@ -69,6 +69,7 @@ jobs:
         with:
           scan-type: fs
           scan-ref: .
+          skip-dirs: .git
           scanners: misconfig,secret
           format: sarif
           output: trivy-repository.sarif
